@@ -1,0 +1,176 @@
+// Elite Beach Ranking — schema do banco (Postgres/Neon)
+// Fonte da verdade: docs de modelo aprovados. Pontos, pneu, classificação e
+// variação são DERIVADOS (não persistidos) para evitar drift de histórico.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- enums ----------
+enum PlayerType {
+  REGULAR
+  GUEST
+}
+
+enum ChampionshipStatus {
+  ATIVA
+  ENCERRADA
+}
+
+enum RoundStatus {
+  ABERTA
+  SORTEADA
+  ENCERRADA
+  AGENDADA // FINALS
+}
+
+enum MatchPhase {
+  GRUPOS
+  SEMIFINAL
+  FINAL
+  TERCEIRO
+}
+
+enum MatchStatus {
+  PENDENTE
+  JOGADO
+}
+
+enum ResultTier {
+  CAMPEAO
+  VICE
+  TERCEIRO
+  QUARTO
+  QUARTAS
+  PARTICIPACAO
+}
+
+// ---------- auth (admin-only) ----------
+model Admin {
+  id           String   @id @default(cuid())
+  nome         String
+  email        String   @unique
+  passwordHash String
+  isOwner      Boolean  @default(false) // "Dono": não pode ser revogado
+  createdAt    DateTime @default(now())
+}
+
+// ---------- jogadores ----------
+model Player {
+  id        String     @id @default(cuid())
+  nome      String
+  email     String?
+  type      PlayerType @default(REGULAR) // GUEST nunca pontua
+  active    Boolean    @default(true) // soft delete
+  createdAt DateTime   @default(now())
+
+  teamsAsP1 Team[]        @relation("TeamP1")
+  teamsAsP2 Team[]        @relation("TeamP2")
+  results   RoundResult[]
+}
+
+// ---------- campeonato / temporada ----------
+model Championship {
+  id         String             @id @default(cuid())
+  nome       String
+  temporada  String
+  formato    String
+  status     ChampionshipStatus @default(ATIVA) // só um ATIVA por vez (regra na aplicação)
+  inicio     DateTime           @db.Date
+  fim        DateTime           @db.Date
+  finalsDate DateTime           @db.Date
+  createdAt  DateTime           @default(now())
+
+  // tabela de pontos POR CAMPEONATO (defaults da temporada atual)
+  ptsParticipacao Int @default(10)
+  ptsQuartas      Int @default(20)
+  pts4            Int @default(40)
+  pts3            Int @default(60)
+  ptsVice         Int @default(80)
+  ptsCampeao      Int @default(100)
+
+  rounds Round[]
+}
+
+// ---------- rodada / etapa ----------
+model Round {
+  id             String       @id @default(cuid())
+  championshipId String
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  numero         Int? // null na FINALS
+  data           DateTime     @db.Date
+  status         RoundStatus  @default(ABERTA)
+  peso           Int          @default(1) // 1x normal, 2x na última etapa
+  isFinals       Boolean      @default(false)
+
+  // config do sorteio (por rodada)
+  drawGroupSize        Int     @default(3)
+  drawBalanceByRanking Boolean @default(true)
+  drawAvoidRepeat      Boolean @default(true)
+  drawRandomness       Int     @default(60)
+  configConfirmed      Boolean @default(false)
+  duplasConfirmed      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  teams   Team[]
+  matches Match[]
+  results RoundResult[]
+
+  @@unique([championshipId, numero])
+  @@index([championshipId])
+}
+
+// ---------- dupla (sempre 2) ----------
+model Team {
+  id        String  @id @default(cuid())
+  roundId   String
+  round     Round   @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  player1Id String
+  player2Id String
+  player1   Player  @relation("TeamP1", fields: [player1Id], references: [id])
+  player2   Player  @relation("TeamP2", fields: [player2Id], references: [id])
+  grupo     String? // "A" / "B", definido no sorteio
+
+  matchesA Match[] @relation("MatchTeamA")
+  matchesB Match[] @relation("MatchTeamB")
+
+  @@index([roundId])
+}
+
+// ---------- jogo / confronto ----------
+model Match {
+  id      String      @id @default(cuid())
+  roundId String
+  round   Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  phase   MatchPhase
+  grupo   String? // só na fase de grupos
+  teamAId String
+  teamBId String
+  teamA   Team        @relation("MatchTeamA", fields: [teamAId], references: [id])
+  teamB   Team        @relation("MatchTeamB", fields: [teamBId], references: [id])
+  scoreA  Int? // games (ex.: 6)
+  scoreB  Int? // games (ex.: 2) — 6x0 e classificação derivam daqui
+  status  MatchStatus @default(PENDENTE)
+
+  @@index([roundId])
+}
+
+// ---------- resultado congelado ao encerrar ----------
+model RoundResult {
+  id            String     @id @default(cuid())
+  roundId       String
+  round         Round      @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerId      String
+  player        Player     @relation(fields: [playerId], references: [id])
+  tier          ResultTier
+  pointsAwarded Int // já com peso aplicado; GUEST entra com 0
+  createdAt     DateTime   @default(now())
+
+  @@unique([roundId, playerId])
+  @@index([playerId])
+}

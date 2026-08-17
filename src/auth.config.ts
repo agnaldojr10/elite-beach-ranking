@@ -5,6 +5,7 @@ import type { NextAuthConfig } from "next-auth";
  * Os providers ficam em auth.ts (runtime Node).
  */
 export const authConfig = {
+  trustHost: true, // confia no host da plataforma (Vercel) — evita UntrustedHost
   pages: {
     signIn: "/login",
   },

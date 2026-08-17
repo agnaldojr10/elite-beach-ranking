@@ -104,6 +104,32 @@ export async function saveDrawConfig(
   return { ok: true };
 }
 
+export async function trocarParceiro(
+  roundId: string,
+  teamAId: string,
+  teamBId: string,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (teamAId === teamBId) return { ok: false, error: "Selecione duas duplas diferentes." };
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { duplasConfirmed: true },
+  });
+  if (round?.duplasConfirmed) {
+    return { ok: false, error: "Duplas já confirmadas — refaça o sorteio para alterar." };
+  }
+  const a = await prisma.team.findUnique({ where: { id: teamAId }, select: { player2Id: true } });
+  const b = await prisma.team.findUnique({ where: { id: teamBId }, select: { player2Id: true } });
+  if (!a || !b) return { ok: false, error: "Dupla não encontrada." };
+  // troca o 2º integrante entre as duas duplas (mantém grupos e jogos)
+  await prisma.$transaction([
+    prisma.team.update({ where: { id: teamAId }, data: { player2Id: b.player2Id } }),
+    prisma.team.update({ where: { id: teamBId }, data: { player2Id: a.player2Id } }),
+  ]);
+  revalidatePath(`/sorteio/${roundId}`);
+  return { ok: true };
+}
+
 export async function confirmarDuplas(roundId: string): Promise<ActionResult> {
   await requireAdmin();
   const teams = await prisma.team.count({ where: { roundId } });

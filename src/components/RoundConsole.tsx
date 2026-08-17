@@ -12,6 +12,7 @@ import {
   saveScore,
   sortear,
   toggleAttendance,
+  trocarParceiro,
 } from "@/app/sorteio/[roundId]/actions";
 
 type Eligible = { id: string; nome: string; type: "REGULAR" | "GUEST" };
@@ -106,8 +107,11 @@ export function RoundConsole({
   const [guest, setGuest] = useState("");
   const [cfg, setCfg] = useState<Config>(config);
   const [repeated, setRepeated] = useState<{ player1: string; player2: string; timesBefore: number }[] | null>(null);
+  const [swapFor, setSwapFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const allDuplas = useMemo(() => grupos.flatMap((g) => g.duplas), [grupos]);
 
   const presencaOk = present.size >= 4 && present.size % 2 === 0;
   const totalDuplas = grupos.reduce((s, g) => s + g.duplas.length, 0);
@@ -165,6 +169,14 @@ export function RoundConsole({
         setRepeated(res.repeated);
         router.refresh();
       } else setError(res.error);
+    });
+  }
+  function doTrocar(a: string, b: string) {
+    setSwapFor(null);
+    startTransition(async () => {
+      const res = await trocarParceiro(roundId, a, b);
+      if (res.ok) router.refresh();
+      else setError(res.error);
     });
   }
   function shareDuplas() {
@@ -327,7 +339,37 @@ export function RoundConsole({
                 <div key={g.label} className="rounded-xl border border-line bg-surface p-3">
                   <p className="mb-1 text-xs font-bold uppercase text-muted">Grupo {g.label}</p>
                   <ul className="flex flex-col gap-1">
-                    {g.duplas.map((d) => <li key={d.id} className="text-sm text-ink">{d.label}</li>)}
+                    {g.duplas.map((d) => (
+                      <li key={d.id} className="flex flex-col">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-ink">{d.label}</span>
+                          {!duplasConfirmed && (
+                            <button
+                              onClick={() => setSwapFor(swapFor === d.id ? null : d.id)}
+                              className="text-xs font-semibold text-accent"
+                            >
+                              Trocar
+                            </button>
+                          )}
+                        </div>
+                        {swapFor === d.id && (
+                          <div className="mt-1 flex flex-col gap-1 border-l-2 border-line pl-2">
+                            {allDuplas
+                              .filter((x) => x.id !== d.id)
+                              .map((x) => (
+                                <button
+                                  key={x.id}
+                                  onClick={() => doTrocar(d.id, x.id)}
+                                  disabled={pending}
+                                  className="text-left text-xs text-muted disabled:opacity-70"
+                                >
+                                  ↔ trocar parceiro com {x.label}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               ))}

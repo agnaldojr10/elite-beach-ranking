@@ -68,9 +68,10 @@ model Player {
   active    Boolean    @default(true) // soft delete
   createdAt DateTime   @default(now())
 
-  teamsAsP1 Team[]        @relation("TeamP1")
-  teamsAsP2 Team[]        @relation("TeamP2")
-  results   RoundResult[]
+  teamsAsP1   Team[]        @relation("TeamP1")
+  teamsAsP2   Team[]        @relation("TeamP2")
+  results     RoundResult[]
+  attendances Attendance[]
 }
 
 // ---------- campeonato / temporada ----------
@@ -117,9 +118,10 @@ model Round {
 
   createdAt DateTime @default(now())
 
-  teams   Team[]
-  matches Match[]
-  results RoundResult[]
+  teams       Team[]
+  matches     Match[]
+  results     RoundResult[]
+  attendances Attendance[]
 
   @@unique([championshipId, numero])
   @@index([championshipId])
@@ -158,6 +160,17 @@ model Match {
   status  MatchStatus @default(PENDENTE)
 
   @@index([roundId])
+}
+
+// ---------- presença por rodada (quem joga no dia, antes do sorteio) ----------
+model Attendance {
+  roundId  String
+  round    Round  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id])
+
+  @@id([roundId, playerId])
+  @@index([playerId])
 }
 
 // ---------- resultado congelado ao encerrar ----------

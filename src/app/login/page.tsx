@@ -12,7 +12,9 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[#081A1E] px-6 text-[#F3EEE2]">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
+        <div className="mb-8 flex flex-col items-center text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Elite Beach Ranking" className="mb-3 h-20 w-20" />
           <h1 className="text-2xl font-bold">Elite Beach Ranking</h1>
           <p className="mt-1 text-sm text-[#8FA9AE]">Painel administrativo</p>
         </div>

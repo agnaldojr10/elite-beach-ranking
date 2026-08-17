@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Painel administrativo do ranking de Beach Tennis da Elite Beach",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "EB Ranking" },
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: "/logo.svg", apple: "/logo.svg" },
 };
 
 export const viewport: Viewport = {

@@ -1,21 +1,40 @@
-import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { ChampionshipsManager } from "@/components/ChampionshipsManager";
 
-export default function CampeonatosPage() {
+export const dynamic = "force-dynamic";
+
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+export default async function CampeonatosPage() {
+  const rows = await prisma.championship.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      nome: true,
+      temporada: true,
+      formato: true,
+      status: true,
+      inicio: true,
+      fim: true,
+      finalsDate: true,
+    },
+  });
+
+  const campeonatos = rows.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    temporada: c.temporada,
+    formato: c.formato,
+    status: c.status,
+    inicio: iso(c.inicio),
+    fim: iso(c.fim),
+    finalsDate: iso(c.finalsDate),
+  }));
+
   return (
     <AppShell title="Cadastros">
-      <div className="mb-3 flex gap-2">
-        <Link
-          href="/cadastros/jogadores"
-          className="flex-1 rounded-xl border border-line bg-card py-2.5 text-center text-sm font-semibold text-muted"
-        >
-          Jogadores
-        </Link>
-        <span className="flex-1 rounded-xl bg-accent py-2.5 text-center text-sm font-bold text-accent-ink">
-          Campeonatos
-        </span>
-      </div>
-      <p className="py-10 text-center text-sm text-muted">Em breve.</p>
+      <ChampionshipsManager campeonatos={campeonatos} />
     </AppShell>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { shareText } from "@/lib/share";
 
@@ -134,19 +135,21 @@ export function RankingView({
 
             <ul className="flex flex-col gap-2">
               {rows.map((r) => (
-                <li
-                  key={r.playerId}
-                  className="flex items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3"
-                >
-                  <span className="w-6 text-center text-sm font-bold text-muted">{r.posicao}</span>
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ocean/15 text-xs font-bold text-ocean">
-                    {initials(r.nome)}
-                  </span>
-                  <span className="flex-1 truncate text-sm font-semibold text-ink">{r.nome}</span>
-                  <span className={`text-xs font-bold ${VAR[r.variacao].cls}`}>
-                    {VAR[r.variacao].icon}
-                  </span>
-                  <span className="w-12 text-right text-sm font-bold text-ink">{r.pontos}</span>
+                <li key={r.playerId}>
+                  <Link
+                    href={`/jogador/${r.playerId}`}
+                    className="flex items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3"
+                  >
+                    <span className="w-6 text-center text-sm font-bold text-muted">{r.posicao}</span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ocean/15 text-xs font-bold text-ocean">
+                      {initials(r.nome)}
+                    </span>
+                    <span className="flex-1 truncate text-sm font-semibold text-ink">{r.nome}</span>
+                    <span className={`text-xs font-bold ${VAR[r.variacao].cls}`}>
+                      {VAR[r.variacao].icon}
+                    </span>
+                    <span className="w-12 text-right text-sm font-bold text-ink">{r.pontos}</span>
+                  </Link>
                 </li>
               ))}
             </ul>

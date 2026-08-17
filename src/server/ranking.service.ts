@@ -26,7 +26,7 @@ function rankPositions(totals: Map<string, number>): Map<string, number> {
  */
 export async function getRankingGeral(championshipId: string): Promise<RankingGeral> {
   const results = await prisma.roundResult.findMany({
-    where: { round: { championshipId } },
+    where: { round: { championshipId, isFinals: false } },
     select: {
       playerId: true,
       pointsAwarded: true,

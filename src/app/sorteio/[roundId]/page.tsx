@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { RoundConsole } from "@/components/RoundConsole";
+import { FinalsConsole } from "@/components/FinalsConsole";
 import { buildGroupStandings, groupsComplete } from "@/server/knockout.service";
+import { getRankingGeral } from "@/server/ranking.service";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
     where: { id: roundId },
     select: {
       id: true,
+      championshipId: true,
       numero: true,
       data: true,
       status: true,
@@ -38,6 +41,28 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
     },
   });
   if (!round) notFound();
+
+  // FINALS: sorteio no papel — app lista os 12 classificados e registra o pódio.
+  if (round.isFinals) {
+    const { rows } = await getRankingGeral(round.championshipId);
+    const classificados = rows.slice(0, 12).map((r) => ({ playerId: r.playerId, nome: r.nome }));
+    const pod = await prisma.roundResult.findMany({
+      where: { roundId },
+      select: { tier: true, player: { select: { nome: true } } },
+    });
+    const registrado =
+      pod.length > 0
+        ? pod.map((p) => ({ tier: p.tier as "CAMPEAO" | "VICE" | "TERCEIRO", nome: p.player.nome }))
+        : null;
+    return (
+      <AppShell title="FINALS">
+        <Link href="/sorteio" className="mb-3 inline-block text-sm text-ocean">
+          ‹ Rodadas
+        </Link>
+        <FinalsConsole roundId={round.id} classificados={classificados} registrado={registrado} />
+      </AppShell>
+    );
+  }
 
   const [attendances, eligibles, teams, matches] = await Promise.all([
     prisma.attendance.findMany({ where: { roundId }, select: { playerId: true } }),
@@ -122,35 +147,29 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
   const jogosCompletos = resolved(finalM) && (terceiroM ? resolved(terceiroM) : true);
 
   return (
-    <AppShell title={round.isFinals ? "FINALS" : `Rodada ${round.numero}`}>
+    <AppShell title={`Rodada ${round.numero}`}>
       <Link href="/sorteio" className="mb-3 inline-block text-sm text-ocean">
         ‹ Rodadas
       </Link>
 
-      {round.isFinals ? (
-        <div className="rounded-2xl border border-line bg-card p-5 text-sm text-muted">
-          A FINALS é sorteada no papel. Em breve: lista dos 12 classificados e registro do pódio.
-        </div>
-      ) : (
-        <RoundConsole
-          roundId={round.id}
-          presentes={presentes}
-          eligibles={eligibles}
-          config={{
-            groupSize: round.drawGroupSize,
-            balanceByRanking: round.drawBalanceByRanking,
-            avoidRepeat: round.drawAvoidRepeat,
-            randomness: round.drawRandomness,
-          }}
-          configConfirmed={round.configConfirmed}
-          duplasConfirmed={round.duplasConfirmed}
-          grupos={grupos}
-          mataMata={mataMata}
-          gruposCompletos={await groupsComplete(roundId)}
-          jogosCompletos={jogosCompletos}
-          encerrada={round.status === "ENCERRADA"}
-        />
-      )}
+      <RoundConsole
+        roundId={round.id}
+        presentes={presentes}
+        eligibles={eligibles}
+        config={{
+          groupSize: round.drawGroupSize,
+          balanceByRanking: round.drawBalanceByRanking,
+          avoidRepeat: round.drawAvoidRepeat,
+          randomness: round.drawRandomness,
+        }}
+        configConfirmed={round.configConfirmed}
+        duplasConfirmed={round.duplasConfirmed}
+        grupos={grupos}
+        mataMata={mataMata}
+        gruposCompletos={await groupsComplete(roundId)}
+        jogosCompletos={jogosCompletos}
+        encerrada={round.status === "ENCERRADA"}
+      />
     </AppShell>
   );
 }

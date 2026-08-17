@@ -139,6 +139,34 @@ export async function confirmarDuplas(roundId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+export async function registrarPodioFinals(
+  roundId: string,
+  podium: { campeao: [string, string]; vice: [string, string]; terceiro: [string, string] },
+): Promise<ActionResult> {
+  await requireAdmin();
+  const ids = [...podium.campeao, ...podium.vice, ...podium.terceiro];
+  if (ids.some((x) => !x)) return { ok: false, error: "Selecione os 6 jogadores do pódio." };
+  if (new Set(ids).size !== 6) return { ok: false, error: "Um jogador não pode aparecer duas vezes." };
+
+  const round = await prisma.round.findUnique({ where: { id: roundId }, select: { isFinals: true } });
+  if (!round?.isFinals) return { ok: false, error: "Esta não é a rodada da FINALS." };
+
+  // Pódio da FINALS é um REGISTRO (0 pontos) — não afeta o ranking das etapas.
+  const data = [
+    ...podium.campeao.map((playerId) => ({ roundId, playerId, tier: "CAMPEAO" as const, pointsAwarded: 0 })),
+    ...podium.vice.map((playerId) => ({ roundId, playerId, tier: "VICE" as const, pointsAwarded: 0 })),
+    ...podium.terceiro.map((playerId) => ({ roundId, playerId, tier: "TERCEIRO" as const, pointsAwarded: 0 })),
+  ];
+
+  await prisma.$transaction([
+    prisma.roundResult.deleteMany({ where: { roundId } }),
+    prisma.roundResult.createMany({ data }),
+    prisma.round.update({ where: { id: roundId }, data: { status: "ENCERRADA" } }),
+  ]);
+  revalidatePath(`/sorteio/${roundId}`);
+  return { ok: true };
+}
+
 export async function encerrar(roundId: string): Promise<ActionResult> {
   await requireAdmin();
   try {

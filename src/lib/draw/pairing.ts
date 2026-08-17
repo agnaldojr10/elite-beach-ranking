@@ -122,7 +122,7 @@ export function drawPairs(
 
     if (better) best = { pairs, repeatScore, imbalance };
     // Ótimo perfeito: nenhuma repetição e (se não equilibra) nada a melhorar.
-    if (best.repeatScore === 0 && !config.balanceByRanking) break;
+    if (best && best.repeatScore === 0 && !config.balanceByRanking) break;
   }
 
   const chosen = best!;

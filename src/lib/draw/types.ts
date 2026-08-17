@@ -33,9 +33,15 @@ export type DrawResult = {
   seed: string;
 };
 
+/** Dupla já formada, com força = soma dos pontos dos dois jogadores. */
+export type SeededTeam = { id: string; strength: number };
+
+/** Grupo da fase de grupos. */
+export type Group = { label: string; teams: SeededTeam[] };
+
 export class DrawError extends Error {
   constructor(
-    public code: "MIN_PLAYERS" | "ODD_PLAYERS",
+    public code: "MIN_PLAYERS" | "ODD_PLAYERS" | "GROUP_SIZE" | "BRACKET_UNSUPPORTED",
     message: string,
   ) {
     super(message);

@@ -30,6 +30,7 @@ enum RoundStatus {
 
 enum MatchPhase {
   GRUPOS
+  QUARTAS
   SEMIFINAL
   FINAL
   TERCEIRO
@@ -151,6 +152,7 @@ model Match {
   round   Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
   phase   MatchPhase
   grupo   String? // só na fase de grupos
+  slot    Int? // ordena os confrontos do mata-mata (0,1,…)
   teamAId String
   teamBId String
   teamA   Team        @relation("MatchTeamA", fields: [teamAId], references: [id])

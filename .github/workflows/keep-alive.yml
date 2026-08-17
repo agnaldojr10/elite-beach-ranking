@@ -1,0 +1,23 @@
+name: keep-alive
+
+# Mantém o Neon acordado (evita cold start ao lançar placares).
+# Repo público => GitHub Actions grátis/ilimitado.
+# Após o deploy, defina a variável de repositório APP_URL
+# (Settings > Secrets and variables > Actions > Variables) com a URL da Vercel.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # a cada ~5 min (o GitHub pode atrasar sob carga)
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          if [ -z "${{ vars.APP_URL }}" ]; then
+            echo "APP_URL ainda não configurada — nada a fazer."
+            exit 0
+          fi
+          curl -fsS "${{ vars.APP_URL }}/api/health" && echo "" || echo "ping falhou (banco pode estar acordando)"

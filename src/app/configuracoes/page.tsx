@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { ScoringForm } from "@/components/ScoringForm";
 import { AdminsManager } from "@/components/AdminsManager";
+import { ChangePassword } from "@/components/ChangePassword";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function ConfiguracoesPage() {
       <AdminsManager admins={admins} />
 
       <h2 className="mb-2 mt-6 text-xs font-bold uppercase tracking-wide text-muted">Conta</h2>
+      <ChangePassword />
       <form
         action={async () => {
           "use server";

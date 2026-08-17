@@ -69,7 +69,7 @@ export default async function RankingPage() {
   return (
     <AppShell title="Ranking">
       <p className="mb-3 text-xs text-muted">{champ.nome}</p>
-      <RankingView rows={rows} pneu={pneu} rodadas={rodadas} />
+      <RankingView rows={rows} pneu={pneu} rodadas={rodadas} titulo={champ.nome} />
     </AppShell>
   );
 }

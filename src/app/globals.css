@@ -1,22 +1,80 @@
 @import "tailwindcss";
 
-/* Paleta "Praiano moderno" (tema escuro base) — tokens do design. */
-@theme {
-  --color-base: #0c2126; /* fundo da página */
-  --color-surface: #0f2a30; /* inputs/superfícies */
-  --color-card: #123239; /* cards */
-  --color-ink: #f3eee2; /* texto principal */
-  --color-muted: #8fa9ae; /* texto secundário */
-  --color-line: rgba(255, 255, 255, 0.09); /* bordas/divisores */
-  --color-accent: #ff7a1a; /* ação primária (laranja) */
-  --color-accent-ink: #1a0f06; /* texto sobre o accent */
-  --color-ocean: #5b9bd9; /* secundária/links */
-  --color-gold: #f4c430;
-  --color-silver: #c7ccd1;
-  --color-bronze: #d48a4e;
-  --color-success: #4cc38a;
-  --color-danger: #f0645f;
-  --color-warning: #f5b942;
+/* Paleta "Praiano moderno" — variáveis por tema (claro é o padrão). */
+:root {
+  --base: #f7f1e4;
+  --surface: #ffffff;
+  --card: #fff9ef;
+  --ink: #132a2f;
+  --muted: #5b7278;
+  --line: rgba(16, 38, 43, 0.12);
+  --accent: #ff7a1a;
+  --accent-ink: #1a0f06;
+  --ocean: #1f5fa8;
+  --gold: #b8860b;
+  --silver: #6b7580;
+  --bronze: #a15c29;
+  --success: #2e9e63;
+  --danger: #d64545;
+  --warning: #c97a0a;
+}
+
+/* Escuro: segue o sistema quando não há escolha explícita… */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #0c2126;
+    --surface: #0f2a30;
+    --card: #123239;
+    --ink: #f3eee2;
+    --muted: #8fa9ae;
+    --line: rgba(255, 255, 255, 0.09);
+    --accent: #ff7a1a;
+    --accent-ink: #1a0f06;
+    --ocean: #5b9bd9;
+    --gold: #f4c430;
+    --silver: #c7ccd1;
+    --bronze: #d48a4e;
+    --success: #4cc38a;
+    --danger: #f0645f;
+    --warning: #f5b942;
+  }
+}
+
+/* …e quando o usuário escolhe explicitamente Escuro. */
+:root[data-theme="dark"] {
+  --base: #0c2126;
+  --surface: #0f2a30;
+  --card: #123239;
+  --ink: #f3eee2;
+  --muted: #8fa9ae;
+  --line: rgba(255, 255, 255, 0.09);
+  --accent: #ff7a1a;
+  --accent-ink: #1a0f06;
+  --ocean: #5b9bd9;
+  --gold: #f4c430;
+  --silver: #c7ccd1;
+  --bronze: #d48a4e;
+  --success: #4cc38a;
+  --danger: #f0645f;
+  --warning: #f5b942;
+}
+
+@theme inline {
+  --color-base: var(--base);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ocean: var(--ocean);
+  --color-gold: var(--gold);
+  --color-silver: var(--silver);
+  --color-bronze: var(--bronze);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -28,8 +86,8 @@ body {
 }
 
 body {
-  background: var(--color-base);
-  color: var(--color-ink);
+  background: var(--base);
+  color: var(--ink);
   -webkit-tap-highlight-color: transparent;
 }
 

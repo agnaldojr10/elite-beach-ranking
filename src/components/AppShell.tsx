@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 
@@ -40,11 +41,10 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
-      {title ? (
-        <header className="flex items-center gap-3 px-5 pb-3 pt-5">
-          <h1 className="text-xl font-bold text-ink">{title}</h1>
-        </header>
-      ) : null}
+      <header className="flex items-center gap-3 px-5 pb-3 pt-5">
+        {title ? <h1 className="flex-1 text-xl font-bold text-ink">{title}</h1> : <span className="flex-1" />}
+        <ThemeToggle />
+      </header>
 
       <main className="flex-1 overflow-y-auto px-5 pb-24">{children}</main>
 

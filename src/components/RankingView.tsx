@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { shareText } from "@/lib/share";
 
 type Row = {
   posicao: number;
@@ -62,15 +63,28 @@ export function RankingView({
   rows,
   pneu,
   rodadas,
+  titulo,
 }: {
   rows: Row[];
   pneu: Pneu;
   rodadas: Rodada[];
+  titulo: string;
 }) {
   const [tab, setTab] = useState<"geral" | "rodada">("geral");
   const [rodadaId, setRodadaId] = useState<string>(rodadas.at(-1)?.id ?? "");
 
   const rodada = rodadas.find((r) => r.id === rodadaId) ?? null;
+
+  function shareGeral() {
+    const linhas = rows.map((r) => `${r.posicao}. ${r.nome} — ${r.pontos} pts`);
+    const pneuLinha = pneu ? `\n🛞 Pneu: ${pneu.nome} (${pneu.vezes}×)` : "";
+    void shareText(`🏆 Ranking Geral — ${titulo}\n\n${linhas.join("\n")}${pneuLinha}`);
+  }
+  function shareRodada() {
+    if (!rodada) return;
+    const linhas = rodada.results.map((r) => `${r.pos}º ${r.nome} (${r.tierLabel}) +${r.pts}`);
+    void shareText(`📋 Rodada ${rodada.numero} — ${titulo}\n\n${linhas.join("\n")}`);
+  }
 
   const tabBtn = (v: "geral" | "rodada", label: string) => (
     <button
@@ -98,6 +112,13 @@ export function RankingView({
         ) : (
           <>
             <Podium rows={rows} />
+
+            <button
+              onClick={shareGeral}
+              className="rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent"
+            >
+              Compartilhar no WhatsApp
+            </button>
 
             {pneu && (
               <div className="flex items-center gap-3 rounded-2xl border border-line bg-warning/10 px-4 py-3">
@@ -148,6 +169,15 @@ export function RankingView({
                   </option>
                 ))}
               </select>
+
+              {rodada && rodada.results.length > 0 && (
+                <button
+                  onClick={shareRodada}
+                  className="rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent"
+                >
+                  Compartilhar no WhatsApp
+                </button>
+              )}
 
               {rodada && (
                 <ul className="flex flex-col gap-2">

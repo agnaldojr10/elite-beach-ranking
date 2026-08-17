@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { shareText } from "@/lib/share";
 import {
   confirmarDuplas,
   encerrar,
@@ -166,6 +167,12 @@ export function RoundConsole({
       } else setError(res.error);
     });
   }
+  function shareDuplas() {
+    const txt = grupos
+      .map((g) => `Grupo ${g.label}:\n${g.duplas.map((d) => `• ${d.label}`).join("\n")}`)
+      .join("\n\n");
+    void shareText(`🎾 Duplas sorteadas\n\n${txt}`);
+  }
   function doConfirmarDuplas() {
     startTransition(async () => {
       const res = await confirmarDuplas(roundId);
@@ -324,6 +331,9 @@ export function RoundConsole({
                   </ul>
                 </div>
               ))}
+              <button onClick={shareDuplas} className="w-full rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent">
+                Compartilhar duplas
+              </button>
               {!duplasConfirmed ? (
                 <button onClick={doConfirmarDuplas} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
                   Confirmar duplas

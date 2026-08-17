@@ -81,6 +81,38 @@ export async function gerarMataMata(roundId: string): Promise<ActionResult> {
   }
 }
 
+export async function saveDrawConfig(
+  roundId: string,
+  cfg: { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number },
+): Promise<ActionResult> {
+  await requireAdmin();
+  const groupSize = Math.round(cfg.groupSize);
+  const randomness = Math.round(cfg.randomness);
+  if (groupSize < 2 || groupSize > 6) return { ok: false, error: "Tamanho do grupo deve ser 2 a 6 duplas." };
+  if (randomness < 0 || randomness > 100) return { ok: false, error: "Aleatoriedade deve ser 0 a 100." };
+  await prisma.round.update({
+    where: { id: roundId },
+    data: {
+      drawGroupSize: groupSize,
+      drawBalanceByRanking: cfg.balanceByRanking,
+      drawAvoidRepeat: cfg.avoidRepeat,
+      drawRandomness: randomness,
+      configConfirmed: true,
+    },
+  });
+  revalidatePath(`/sorteio/${roundId}`);
+  return { ok: true };
+}
+
+export async function confirmarDuplas(roundId: string): Promise<ActionResult> {
+  await requireAdmin();
+  const teams = await prisma.team.count({ where: { roundId } });
+  if (teams === 0) return { ok: false, error: "Sorteie as duplas antes de confirmar." };
+  await prisma.round.update({ where: { id: roundId }, data: { duplasConfirmed: true } });
+  revalidatePath(`/sorteio/${roundId}`);
+  return { ok: true };
+}
+
 export async function encerrar(roundId: string): Promise<ActionResult> {
   await requireAdmin();
   try {

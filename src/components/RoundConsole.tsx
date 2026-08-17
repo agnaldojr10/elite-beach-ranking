@@ -1,24 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import {
+  confirmarDuplas,
   encerrar,
   gerarMataMata,
   quickAddGuest,
+  saveDrawConfig,
   saveScore,
   sortear,
   toggleAttendance,
 } from "@/app/sorteio/[roundId]/actions";
 
 type Eligible = { id: string; nome: string; type: "REGULAR" | "GUEST" };
-type Jogo = {
-  matchId: string;
-  labelA: string;
-  labelB: string;
-  scoreA: number | null;
-  scoreB: number | null;
-};
+type Jogo = { matchId: string; labelA: string; labelB: string; scoreA: number | null; scoreB: number | null };
 type Grupo = {
   label: string;
   duplas: { id: string; label: string }[];
@@ -26,7 +22,8 @@ type Grupo = {
   classificacao: { label: string; wins: number; saldo: number }[];
 };
 type KoJogo = Jogo & { phaseLabel: string };
-type Repeated = { player1: string; player2: string; timesBefore: number };
+type Config = { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number };
+type StepKey = "presenca" | "config" | "sortear" | "jogos" | "encerrar";
 
 function MatchRow({
   m,
@@ -53,62 +50,81 @@ function MatchRow({
       <p className="flex-1 text-xs text-ink">
         {m.labelA} <span className="text-muted">vs</span> {m.labelB}
       </p>
-      <input
-        inputMode="numeric"
-        value={a}
-        disabled={disabled}
-        onChange={(e) => setA(e.target.value.replace(/\D/g, "").slice(0, 2))}
-        onBlur={commit}
-        className={input}
-      />
+      <input inputMode="numeric" value={a} disabled={disabled} onChange={(e) => setA(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={commit} className={input} />
       <span className="text-muted">-</span>
-      <input
-        inputMode="numeric"
-        value={b}
-        disabled={disabled}
-        onChange={(e) => setB(e.target.value.replace(/\D/g, "").slice(0, 2))}
-        onBlur={commit}
-        className={input}
-      />
+      <input inputMode="numeric" value={b} disabled={disabled} onChange={(e) => setB(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={commit} className={input} />
+    </div>
+  );
+}
+
+function Toggle({ on, onClick, label, sub }: { on: boolean; onClick: () => void; label: string; sub: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <div>
+        <p className="text-sm font-medium text-ink">{label}</p>
+        <p className="text-xs text-muted">{sub}</p>
+      </div>
+      <button
+        onClick={onClick}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? "bg-accent" : "bg-line"}`}
+      >
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+      </button>
     </div>
   );
 }
 
 export function RoundConsole({
   roundId,
-  status,
   presentes,
   eligibles,
+  config,
+  configConfirmed,
+  duplasConfirmed,
   grupos,
   mataMata,
   gruposCompletos,
-  podeEncerrar,
+  jogosCompletos,
   encerrada,
 }: {
   roundId: string;
-  status: string;
   presentes: string[];
   eligibles: Eligible[];
+  config: Config;
+  configConfirmed: boolean;
+  duplasConfirmed: boolean;
   grupos: Grupo[];
   mataMata: KoJogo[];
   gruposCompletos: boolean;
-  podeEncerrar: boolean;
+  jogosCompletos: boolean;
   encerrada: boolean;
 }) {
   const router = useRouter();
   const [present, setPresent] = useState<Set<string>>(new Set(presentes));
   const [search, setSearch] = useState("");
   const [guest, setGuest] = useState("");
-  const [repeated, setRepeated] = useState<Repeated[] | null>(null);
+  const [cfg, setCfg] = useState<Config>(config);
+  const [repeated, setRepeated] = useState<{ player1: string; player2: string; timesBefore: number }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const presencaOk = present.size >= 4 && present.size % 2 === 0;
+  const totalDuplas = grupos.reduce((s, g) => s + g.duplas.length, 0);
+
+  const currentStep = (): StepKey => {
+    if (encerrada) return "encerrar";
+    if (!presencaOk) return "presenca";
+    if (!configConfirmed) return "config";
+    if (!duplasConfirmed) return "sortear";
+    if (!jogosCompletos) return "jogos";
+    return "encerrar";
+  };
+  const [expanded, setExpanded] = useState<StepKey>(currentStep());
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
     return eligibles.filter((p) => p.nome.toLowerCase().includes(q));
   }, [eligibles, search]);
-
-  const jaSorteado = grupos.length > 0;
 
   function toggle(id: string) {
     setPresent((prev) => {
@@ -119,7 +135,6 @@ export function RoundConsole({
     });
     startTransition(() => void toggleAttendance(roundId, id));
   }
-
   function addGuest() {
     if (guest.trim().length < 2) return;
     startTransition(async () => {
@@ -130,7 +145,16 @@ export function RoundConsole({
       } else setError(res.error);
     });
   }
-
+  function salvarConfig() {
+    setError(null);
+    startTransition(async () => {
+      const res = await saveDrawConfig(roundId, cfg);
+      if (res.ok) {
+        setExpanded("sortear");
+        router.refresh();
+      } else setError(res.error);
+    });
+  }
   function doSortear() {
     setError(null);
     setRepeated(null);
@@ -142,7 +166,15 @@ export function RoundConsole({
       } else setError(res.error);
     });
   }
-
+  function doConfirmarDuplas() {
+    startTransition(async () => {
+      const res = await confirmarDuplas(roundId);
+      if (res.ok) {
+        setExpanded("jogos");
+        router.refresh();
+      } else setError(res.error);
+    });
+  }
   function saveMatch(matchId: string, a: number, b: number) {
     startTransition(async () => {
       const res = await saveScore(roundId, matchId, a, b);
@@ -150,7 +182,6 @@ export function RoundConsole({
       else setError(res.error);
     });
   }
-
   function doGerarMataMata() {
     setError(null);
     startTransition(async () => {
@@ -159,9 +190,7 @@ export function RoundConsole({
       else setError(res.error);
     });
   }
-
   function doEncerrar() {
-    setError(null);
     if (!confirm("Encerrar a rodada aplica os pontos e atualiza o ranking. Continuar?")) return;
     startTransition(async () => {
       const res = await encerrar(roundId);
@@ -170,145 +199,170 @@ export function RoundConsole({
     });
   }
 
-  const n = present.size;
-
-  return (
-    <div className="flex flex-col gap-4">
-      {error && <p className="text-sm font-semibold text-danger">{error}</p>}
-      {encerrada && (
-        <div className="rounded-xl bg-success/15 p-3 text-center text-sm font-bold text-success">
-          Rodada encerrada — ranking atualizado.
-        </div>
-      )}
-
-      {/* Presença */}
-      {!encerrada && (
-        <section className="rounded-2xl border border-line bg-card p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-ink">Presença</h2>
-            <span className="text-xs text-muted">{n} confirmados</span>
-          </div>
+  const steps: {
+    key: StepKey;
+    title: string;
+    summary: string;
+    done: boolean;
+    locked: boolean;
+    body: ReactNode;
+  }[] = [
+    {
+      key: "presenca",
+      title: "Presença",
+      summary: presencaOk ? `${present.size} confirmados` : `${present.size} selecionados (mín. 4, par)`,
+      done: presencaOk,
+      locked: false,
+      body: (
+        <div className="flex flex-col gap-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar jogador..."
-            className="mb-2 w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-accent"
+            className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-accent"
           />
-          <ul className="mb-3 flex max-h-64 flex-col gap-1 overflow-y-auto">
+          <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto">
             {list.map((p) => {
               const on = present.has(p.id);
               return (
                 <li key={p.id}>
-                  <button
-                    onClick={() => toggle(p.id)}
-                    className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left"
-                  >
-                    <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] ${
-                        on
-                          ? "border-accent bg-accent text-accent-ink"
-                          : "border-line text-transparent"
-                      }`}
-                    >
-                      ✓
-                    </span>
+                  <button onClick={() => toggle(p.id)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left">
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] ${on ? "border-accent bg-accent text-accent-ink" : "border-line text-transparent"}`}>✓</span>
                     <span className="flex-1 truncate text-sm text-ink">{p.nome}</span>
-                    {p.type === "GUEST" && (
-                      <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">
-                        Não pontua
-                      </span>
-                    )}
+                    {p.type === "GUEST" && <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">Não pontua</span>}
                   </button>
                 </li>
               );
             })}
           </ul>
           <div className="flex gap-2">
-            <input
-              value={guest}
-              onChange={(e) => setGuest(e.target.value)}
-              placeholder="Cadastro rápido de convidado"
-              className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-accent"
-            />
-            <button
-              onClick={addGuest}
-              disabled={pending}
-              className="rounded-xl border border-line bg-surface px-4 text-xl text-ink disabled:opacity-70"
-            >
-              +
-            </button>
+            <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Cadastro rápido de convidado" className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-accent" />
+            <button onClick={addGuest} disabled={pending} className="rounded-xl border border-line bg-surface px-4 text-xl text-ink disabled:opacity-70">+</button>
           </div>
-        </section>
-      )}
-
-      {/* Sortear */}
-      {!encerrada && (
-        <section className="rounded-2xl border border-line bg-card p-4">
-          <h2 className="mb-2 text-sm font-bold text-ink">Sortear</h2>
-          {n < 4 ? (
-            <p className="text-sm text-muted">Selecione ao menos 4 jogadores presentes.</p>
-          ) : n % 2 !== 0 ? (
-            <p className="text-sm text-warning">Número ímpar de presentes ({n}). Ajuste para par.</p>
-          ) : (
-            <button
-              onClick={doSortear}
-              disabled={pending}
-              className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70"
-            >
-              {pending ? "Sorteando…" : jaSorteado ? "Refazer sorteio" : "Sortear duplas"}
+          <button
+            onClick={() => setExpanded("config")}
+            disabled={!presencaOk}
+            className="mt-1 w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-60"
+          >
+            Continuar
+          </button>
+        </div>
+      ),
+    },
+    {
+      key: "config",
+      title: "Configuração do sorteio",
+      summary: configConfirmed
+        ? `Grupos de ${config.groupSize} duplas · equilíbrio ${config.balanceByRanking ? "ativado" : "desativado"}`
+        : presencaOk
+          ? `${present.size} presentes (${present.size / 2} duplas)`
+          : "Aguardando presença",
+      done: configConfirmed,
+      locked: !presencaOk,
+      body: (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-muted">
+            {present.size} presentes = {present.size / 2} duplas. Ex.: 8 duplas → grupos de 4 (2 grupos); 9 duplas → grupos de 3 (3 grupos).
+          </p>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-muted">Tamanho do grupo (nº de duplas)</label>
+            <input
+              type="number"
+              min={2}
+              max={6}
+              value={cfg.groupSize}
+              onChange={(e) => setCfg({ ...cfg, groupSize: parseInt(e.target.value) || 2 })}
+              className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-accent"
+            />
+          </div>
+          <Toggle on={cfg.balanceByRanking} onClick={() => setCfg({ ...cfg, balanceByRanking: !cfg.balanceByRanking })} label="Equilíbrio por ranking" sub="Pareia bem colocado com menos colocado" />
+          <Toggle on={cfg.avoidRepeat} onClick={() => setCfg({ ...cfg, avoidRepeat: !cfg.avoidRepeat })} label="Evitar repetição de duplas" sub="Usa o histórico de duplas do campeonato" />
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-muted">Aleatoriedade — {cfg.randomness}%</label>
+            <input type="range" min={0} max={100} value={cfg.randomness} onChange={(e) => setCfg({ ...cfg, randomness: parseInt(e.target.value) })} className="w-full accent-[color:var(--color-accent)]" />
+          </div>
+          <button onClick={salvarConfig} disabled={pending} className="mt-1 w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
+            {pending ? "Salvando…" : "Continuar para o sorteio"}
+          </button>
+        </div>
+      ),
+    },
+    {
+      key: "sortear",
+      title: "Sortear",
+      summary: duplasConfirmed
+        ? `${totalDuplas} duplas confirmadas`
+        : grupos.length > 0
+          ? `${totalDuplas} duplas sorteadas — confirme`
+          : "Pronto para sortear",
+      done: duplasConfirmed,
+      locked: !configConfirmed,
+      body: (
+        <div className="flex flex-col gap-3">
+          {!duplasConfirmed && (
+            <button onClick={doSortear} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
+              {pending ? "Sorteando…" : grupos.length > 0 ? "Refazer sorteio" : "Sortear duplas"}
             </button>
           )}
           {repeated && repeated.length > 0 && (
-            <div className="mt-3 rounded-xl bg-warning/15 p-3 text-xs text-warning">
+            <div className="rounded-xl bg-warning/15 p-3 text-xs text-warning">
               <p className="font-bold">Atenção: duplas repetidas neste sorteio</p>
               <ul className="mt-1 list-disc pl-4">
                 {repeated.map((r, i) => (
-                  <li key={i}>
-                    {r.player1} & {r.player2} (já jogaram {r.timesBefore}×)
-                  </li>
+                  <li key={i}>{r.player1} & {r.player2} (já jogaram {r.timesBefore}×)</li>
                 ))}
               </ul>
             </div>
           )}
-        </section>
-      )}
-
-      {/* Jogos & Resultados */}
-      {jaSorteado && (
-        <section className="rounded-2xl border border-line bg-card p-4">
-          <h2 className="mb-3 text-sm font-bold text-ink">Jogos &amp; Resultados</h2>
-
-          {grupos.map((g) => (
-            <div key={g.label} className="mb-4 rounded-xl border border-line bg-surface p-3">
-              <p className="mb-1 text-xs font-bold uppercase text-accent">Grupo {g.label}</p>
-              {g.jogos.map((m) => (
-                <MatchRow key={m.matchId} m={m} disabled={encerrada} onSave={saveMatch} />
+          {grupos.length > 0 && (
+            <>
+              {grupos.map((g) => (
+                <div key={g.label} className="rounded-xl border border-line bg-surface p-3">
+                  <p className="mb-1 text-xs font-bold uppercase text-muted">Grupo {g.label}</p>
+                  <ul className="flex flex-col gap-1">
+                    {g.duplas.map((d) => <li key={d.id} className="text-sm text-ink">{d.label}</li>)}
+                  </ul>
+                </div>
               ))}
+              {!duplasConfirmed ? (
+                <button onClick={doConfirmarDuplas} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
+                  Confirmar duplas
+                </button>
+              ) : (
+                <p className="rounded-xl bg-success/15 py-2.5 text-center text-sm font-bold text-success">Duplas confirmadas</p>
+              )}
+            </>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "jogos",
+      title: "Jogos & Resultados",
+      summary: jogosCompletos ? "Grupos e mata-mata completos" : duplasConfirmed ? "Lance os placares" : "Aguardando duplas",
+      done: jogosCompletos,
+      locked: !duplasConfirmed,
+      body: (
+        <div className="flex flex-col gap-4">
+          {grupos.map((g) => (
+            <div key={g.label} className="rounded-xl border border-line bg-surface p-3">
+              <p className="mb-1 text-xs font-bold uppercase text-accent">Grupo {g.label}</p>
+              {g.jogos.map((m) => <MatchRow key={m.matchId} m={m} disabled={encerrada} onSave={saveMatch} />)}
               <ul className="mt-2 flex flex-col gap-0.5">
                 {g.classificacao.map((s, i) => (
                   <li key={i} className="flex justify-between text-xs text-muted">
-                    <span>
-                      {i + 1}. {s.label}
-                    </span>
-                    <span className="text-ink">
-                      {s.wins}V · saldo {s.saldo}
-                    </span>
+                    <span>{i + 1}. {s.label}</span>
+                    <span className="text-ink">{s.wins}V · saldo {s.saldo}</span>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-
-          {/* Mata-mata */}
           <div className="rounded-xl border border-line bg-surface p-3">
             <p className="mb-2 text-xs font-bold uppercase text-accent">Mata-mata</p>
             {mataMata.length === 0 ? (
               gruposCompletos ? (
-                <button
-                  onClick={doGerarMataMata}
-                  disabled={pending}
-                  className="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-accent-ink disabled:opacity-70"
-                >
+                <button onClick={doGerarMataMata} disabled={pending} className="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-accent-ink disabled:opacity-70">
                   {pending ? "Gerando…" : "Gerar mata-mata"}
                 </button>
               ) : (
@@ -323,35 +377,61 @@ export function RoundConsole({
               ).map(([fase, jogos]) => (
                 <div key={fase} className="mb-2">
                   <p className="text-[11px] font-bold uppercase text-muted">{fase}</p>
-                  {jogos.map((m) => (
-                    <MatchRow key={m.matchId} m={m} disabled={encerrada} onSave={saveMatch} />
-                  ))}
+                  {jogos.map((m) => <MatchRow key={m.matchId} m={m} disabled={encerrada} onSave={saveMatch} />)}
                 </div>
               ))
             )}
           </div>
-        </section>
-      )}
-
-      {/* Encerrar */}
-      {jaSorteado && !encerrada && (
-        <section className="rounded-2xl border border-line bg-card p-4">
-          <h2 className="mb-2 text-sm font-bold text-ink">Encerrar rodada</h2>
-          {podeEncerrar ? (
-            <button
-              onClick={doEncerrar}
-              disabled={pending}
-              className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70"
-            >
-              {pending ? "Encerrando…" : "Encerrar rodada"}
+          {jogosCompletos && !encerrada && (
+            <button onClick={() => setExpanded("encerrar")} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink">
+              Ir para o encerramento
             </button>
-          ) : (
-            <p className="text-sm text-muted">
-              Lance o placar da final (e da disputa de 3º) para poder encerrar.
-            </p>
           )}
-        </section>
-      )}
+        </div>
+      ),
+    },
+    {
+      key: "encerrar",
+      title: "Encerrar rodada",
+      summary: encerrada ? "Rodada encerrada" : jogosCompletos ? "Pronta para encerrar" : "Aguardando os jogos",
+      done: encerrada,
+      locked: !jogosCompletos,
+      body: encerrada ? (
+        <p className="rounded-xl bg-success/15 py-2.5 text-center text-sm font-bold text-success">
+          Rodada encerrada — ranking atualizado.
+        </p>
+      ) : (
+        <button onClick={doEncerrar} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
+          {pending ? "Encerrando…" : "Encerrar rodada"}
+        </button>
+      ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      {error && <p className="text-sm font-semibold text-danger">{error}</p>}
+      {steps.map((s, i) => {
+        const open = expanded === s.key && !s.locked;
+        return (
+          <section key={s.key} className={`overflow-hidden rounded-2xl border border-line bg-card ${s.locked ? "opacity-50" : ""}`}>
+            <button
+              onClick={() => !s.locked && setExpanded(open ? ("" as StepKey) : s.key)}
+              className="flex w-full items-center gap-3 p-4 text-left"
+            >
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${s.done ? "bg-success text-white" : "bg-accent/15 text-accent"}`}>
+                {s.done ? "✓" : i + 1}
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm font-bold text-ink">{s.title}</span>
+                <span className="block text-xs text-muted">{s.summary}</span>
+              </span>
+              <span className={`text-muted transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+            </button>
+            {open && <div className="px-4 pb-4">{s.body}</div>}
+          </section>
+        );
+      })}
     </div>
   );
 }

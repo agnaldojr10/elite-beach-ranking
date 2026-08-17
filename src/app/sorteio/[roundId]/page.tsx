@@ -22,7 +22,20 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
 
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    select: { id: true, numero: true, data: true, status: true, peso: true, isFinals: true },
+    select: {
+      id: true,
+      numero: true,
+      data: true,
+      status: true,
+      peso: true,
+      isFinals: true,
+      drawGroupSize: true,
+      drawBalanceByRanking: true,
+      drawAvoidRepeat: true,
+      drawRandomness: true,
+      configConfirmed: true,
+      duplasConfirmed: true,
+    },
   });
   if (!round) notFound();
 
@@ -102,9 +115,11 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
       scoreB: m.scoreB,
     }));
 
+  const resolved = (m?: { scoreA: number | null; scoreB: number | null }) =>
+    !!m && m.scoreA != null && m.scoreB != null && m.scoreA !== m.scoreB;
   const finalM = matches.find((m) => m.phase === "FINAL");
-  const podeEncerrar =
-    !!finalM && finalM.scoreA != null && finalM.scoreB != null && finalM.scoreA !== finalM.scoreB;
+  const terceiroM = matches.find((m) => m.phase === "TERCEIRO");
+  const jogosCompletos = resolved(finalM) && (terceiroM ? resolved(terceiroM) : true);
 
   return (
     <AppShell title={round.isFinals ? "FINALS" : `Rodada ${round.numero}`}>
@@ -119,13 +134,20 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
       ) : (
         <RoundConsole
           roundId={round.id}
-          status={round.status}
           presentes={presentes}
           eligibles={eligibles}
+          config={{
+            groupSize: round.drawGroupSize,
+            balanceByRanking: round.drawBalanceByRanking,
+            avoidRepeat: round.drawAvoidRepeat,
+            randomness: round.drawRandomness,
+          }}
+          configConfirmed={round.configConfirmed}
+          duplasConfirmed={round.duplasConfirmed}
           grupos={grupos}
           mataMata={mataMata}
           gruposCompletos={await groupsComplete(roundId)}
-          podeEncerrar={podeEncerrar}
+          jogosCompletos={jogosCompletos}
           encerrada={round.status === "ENCERRADA"}
         />
       )}

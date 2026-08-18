@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { RoundConsole } from "@/components/RoundConsole";
+import { RoundSummaryCard } from "@/components/RoundSummaryCard";
 import { FinalsConsole } from "@/components/FinalsConsole";
 import { buildGroupStandings, groupsComplete } from "@/server/knockout.service";
 import { getRankingGeral } from "@/server/ranking.service";
@@ -151,6 +152,14 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
       <Link href="/sorteio" className="mb-3 inline-block text-sm text-ocean">
         ‹ Rodadas
       </Link>
+
+      <RoundSummaryCard
+        roundId={round.id}
+        numero={round.numero}
+        data={round.data.toISOString()}
+        status={round.status as "ABERTA" | "SORTEADA" | "ENCERRADA" | "AGENDADA"}
+        peso={round.peso}
+      />
 
       <RoundConsole
         roundId={round.id}

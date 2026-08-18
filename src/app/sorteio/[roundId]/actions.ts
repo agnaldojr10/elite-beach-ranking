@@ -5,9 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guard";
 import { generateDraw } from "@/server/draw.service";
 import { syncKnockout } from "@/server/knockout.service";
-import { encerrarRodada } from "@/server/round-close.service";
+import { buildRoundExport, encerrarRodada } from "@/server/round-close.service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ExportResult = { ok: true; text: string } | { ok: false; error: string };
 export type SortearResult =
   | { ok: true; repeated: { player1: string; player2: string; timesBefore: number }[] }
   | { ok: false; error: string };
@@ -177,4 +178,30 @@ export async function encerrar(roundId: string): Promise<ActionResult> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao encerrar a rodada." };
   }
+}
+
+export async function exportRodada(roundId: string): Promise<ExportResult> {
+  await requireAdmin();
+  try {
+    const text = await buildRoundExport(roundId);
+    return { ok: true, text };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao gerar o resumo." };
+  }
+}
+
+export async function setPeso(roundId: string, peso: number): Promise<ActionResult> {
+  await requireAdmin();
+  if (peso !== 1 && peso !== 2) return { ok: false, error: "Peso deve ser 1x ou 2x." };
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { status: true },
+  });
+  if (!round) return { ok: false, error: "Rodada não encontrada." };
+  if (round.status === "ENCERRADA") {
+    return { ok: false, error: "Rodada encerrada — o peso não pode mais ser alterado." };
+  }
+  await prisma.round.update({ where: { id: roundId }, data: { peso } });
+  revalidatePath(`/sorteio/${roundId}`);
+  return { ok: true };
 }

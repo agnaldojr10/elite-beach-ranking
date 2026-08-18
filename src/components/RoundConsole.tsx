@@ -6,6 +6,7 @@ import { shareText } from "@/lib/share";
 import {
   confirmarDuplas,
   encerrar,
+  exportRodada,
   gerarMataMata,
   quickAddGuest,
   saveDrawConfig,
@@ -27,6 +28,36 @@ type KoJogo = Jogo & { phaseLabel: string };
 type Config = { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number };
 type StepKey = "presenca" | "config" | "sortear" | "jogos" | "encerrar";
 
+/**
+ * Interpreta o placar digitado. Aceita separadores (6-2, 6/2, 6x2, 6 2) e
+ * também dois dígitos colados (62 → 6-2), já que no beach tennis cada lado é
+ * um único dígito (0–7). Retorna [a, b] ou null se não conseguir ler.
+ */
+function parseScore(raw: string): [number, number] | null {
+  const s = raw.trim();
+  if (!s) return null;
+  const sep = s.match(/^(\d+)\s*[-/x:.\s]\s*(\d+)$/i);
+  if (sep) return [parseInt(sep[1], 10), parseInt(sep[2], 10)];
+  const digits = s.replace(/\D/g, "");
+  if (digits.length === 2) return [parseInt(digits[0], 10), parseInt(digits[1], 10)];
+  return null;
+}
+
+/**
+ * Regra do beach tennis (set único): vence quem chega a 6 games (0–5 do
+ * adversário). Em 6/6 joga-se o tiebreak e o vencedor é declarado 7/6.
+ * Logo, placares válidos: 6×{0..5}, {0..5}×6, 7×6 e 6×7. Sem empates.
+ */
+function isValidBeachScore(a: number, b: number): boolean {
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) return false;
+  if (a === b) return false;
+  const hi = Math.max(a, b);
+  const lo = Math.min(a, b);
+  if (hi === 6 && lo >= 0 && lo <= 5) return true;
+  if (hi === 7 && lo === 6) return true;
+  return false;
+}
+
 function MatchRow({
   m,
   disabled,
@@ -36,25 +67,59 @@ function MatchRow({
   disabled: boolean;
   onSave: (matchId: string, a: number, b: number) => void;
 }) {
-  const [a, setA] = useState(m.scoreA?.toString() ?? "");
-  const [b, setB] = useState(m.scoreB?.toString() ?? "");
+  const initial = m.scoreA != null && m.scoreB != null ? `${m.scoreA}-${m.scoreB}` : "";
+  const [val, setVal] = useState(initial);
+  const [err, setErr] = useState<string | null>(null);
+
   function commit() {
-    if (a !== "" && b !== "") {
-      const na = parseInt(a, 10);
-      const nb = parseInt(b, 10);
-      if (Number.isInteger(na) && Number.isInteger(nb)) onSave(m.matchId, na, nb);
+    const raw = val.trim();
+    if (raw === "") {
+      setErr(null);
+      return;
     }
+    const parsed = parseScore(raw);
+    if (!parsed) {
+      setErr("Use o formato 6-2");
+      return;
+    }
+    const [a, b] = parsed;
+    if (!isValidBeachScore(a, b)) {
+      setErr("Placar inválido para o beach tennis");
+      return;
+    }
+    setErr(null);
+    setVal(`${a}-${b}`);
+    if (a !== m.scoreA || b !== m.scoreB) onSave(m.matchId, a, b);
   }
-  const input =
-    "w-10 rounded-lg border border-line bg-card px-1 py-1.5 text-center text-sm font-semibold text-ink outline-none focus:border-accent disabled:opacity-60";
+
+  const input = `w-16 rounded-lg border bg-card px-2 py-1.5 text-center text-sm font-semibold text-ink outline-none focus:border-accent disabled:opacity-60 ${
+    err ? "border-danger" : "border-line"
+  }`;
+
   return (
-    <div className="flex items-center gap-2 border-b border-line py-2 last:border-0">
-      <p className="flex-1 text-xs text-ink">
-        {m.labelA} <span className="text-muted">vs</span> {m.labelB}
-      </p>
-      <input inputMode="numeric" value={a} disabled={disabled} onChange={(e) => setA(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={commit} className={input} />
-      <span className="text-muted">-</span>
-      <input inputMode="numeric" value={b} disabled={disabled} onChange={(e) => setB(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={commit} className={input} />
+    <div className="flex flex-col gap-0.5 border-b border-line py-2 last:border-0">
+      <div className="flex items-center gap-2">
+        <p className="flex-1 text-xs text-ink">
+          {m.labelA} <span className="text-muted">vs</span> {m.labelB}
+        </p>
+        <input
+          inputMode="numeric"
+          value={val}
+          disabled={disabled}
+          placeholder="6-2"
+          maxLength={5}
+          onChange={(e) => {
+            setVal(e.target.value);
+            setErr(null);
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className={input}
+        />
+      </div>
+      {err && <p className="text-right text-[10.5px] font-semibold text-danger">{err}</p>}
     </div>
   );
 }
@@ -106,6 +171,7 @@ export function RoundConsole({
   const [search, setSearch] = useState("");
   const [guest, setGuest] = useState("");
   const [cfg, setCfg] = useState<Config>(config);
+  const [groupSizeInput, setGroupSizeInput] = useState(String(config.groupSize));
   const [repeated, setRepeated] = useState<{ player1: string; player2: string; timesBefore: number }[] | null>(null);
   const [swapFor, setSwapFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -152,9 +218,16 @@ export function RoundConsole({
   }
   function salvarConfig() {
     setError(null);
+    const groupSize = parseInt(groupSizeInput, 10);
+    if (!Number.isInteger(groupSize) || groupSize < 2 || groupSize > 6) {
+      setError("Informe um tamanho de grupo entre 2 e 6 duplas.");
+      return;
+    }
+    const payload = { ...cfg, groupSize };
     startTransition(async () => {
-      const res = await saveDrawConfig(roundId, cfg);
+      const res = await saveDrawConfig(roundId, payload);
       if (res.ok) {
+        setCfg(payload);
         setExpanded("sortear");
         router.refresh();
       } else setError(res.error);
@@ -213,8 +286,19 @@ export function RoundConsole({
     if (!confirm("Encerrar a rodada aplica os pontos e atualiza o ranking. Continuar?")) return;
     startTransition(async () => {
       const res = await encerrar(roundId);
-      if (res.ok) router.refresh();
-      else setError(res.error);
+      if (res.ok) {
+        router.refresh();
+        const exp = await exportRodada(roundId);
+        if (exp.ok) void shareText(exp.text);
+      } else setError(res.error);
+    });
+  }
+  function doExport() {
+    setError(null);
+    startTransition(async () => {
+      const exp = await exportRodada(roundId);
+      if (exp.ok) void shareText(exp.text);
+      else setError(exp.error);
     });
   }
 
@@ -286,13 +370,13 @@ export function RoundConsole({
           <div>
             <label className="mb-1 block text-xs font-semibold text-muted">Tamanho do grupo (nº de duplas)</label>
             <input
-              type="number"
-              min={2}
-              max={6}
-              value={cfg.groupSize}
-              onChange={(e) => setCfg({ ...cfg, groupSize: parseInt(e.target.value) || 2 })}
+              inputMode="numeric"
+              value={groupSizeInput}
+              placeholder="Ex.: 4"
+              onChange={(e) => setGroupSizeInput(e.target.value.replace(/\D/g, "").slice(0, 1))}
               className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-accent"
             />
+            <p className="mt-1 text-[11px] text-muted">Entre 2 e 6 duplas por grupo.</p>
           </div>
           <Toggle on={cfg.balanceByRanking} onClick={() => setCfg({ ...cfg, balanceByRanking: !cfg.balanceByRanking })} label="Equilíbrio por ranking" sub="Pareia bem colocado com menos colocado" />
           <Toggle on={cfg.avoidRepeat} onClick={() => setCfg({ ...cfg, avoidRepeat: !cfg.avoidRepeat })} label="Evitar repetição de duplas" sub="Usa o histórico de duplas do campeonato" />
@@ -449,9 +533,14 @@ export function RoundConsole({
       done: encerrada,
       locked: !jogosCompletos,
       body: encerrada ? (
-        <p className="rounded-xl bg-success/15 py-2.5 text-center text-sm font-bold text-success">
-          Rodada encerrada — ranking atualizado.
-        </p>
+        <div className="flex flex-col gap-3">
+          <p className="rounded-xl bg-success/15 py-2.5 text-center text-sm font-bold text-success">
+            Rodada encerrada — ranking atualizado.
+          </p>
+          <button onClick={doExport} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
+            {pending ? "Gerando…" : "Compartilhar resultado + ranking"}
+          </button>
+        </div>
       ) : (
         <button onClick={doEncerrar} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
           {pending ? "Encerrando…" : "Encerrar rodada"}

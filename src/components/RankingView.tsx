@@ -11,7 +11,8 @@ type Row = {
   pontos: number;
   variacao: "up" | "down" | "same";
 };
-type Pneu = { playerId: string; nome: string; vezes: number } | null;
+type PneuDetalhe = { rodada: number | null; adversarios: string; parceiro: string };
+type Pneu = { playerId: string; nome: string; vezes: number; detalhes: PneuDetalhe[] } | null;
 type Rodada = {
   id: string;
   numero: number;
@@ -73,6 +74,7 @@ export function RankingView({
 }) {
   const [tab, setTab] = useState<"geral" | "rodada">("geral");
   const [rodadaId, setRodadaId] = useState<string>(rodadas.at(-1)?.id ?? "");
+  const [pneuOpen, setPneuOpen] = useState(false);
 
   const rodada = rodadas.find((r) => r.id === rodadaId) ?? null;
 
@@ -122,14 +124,38 @@ export function RankingView({
             </button>
 
             {pneu && (
-              <div className="flex items-center gap-3 rounded-2xl border border-line bg-warning/10 px-4 py-3">
-                <span className="text-xl">🛞</span>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-ink">Troféu Pneu</p>
-                  <p className="text-xs text-muted">
-                    {pneu.nome} · {pneu.vezes}× com 6×0
-                  </p>
-                </div>
+              <div className="overflow-hidden rounded-2xl border border-line bg-warning/10">
+                <button
+                  onClick={() => setPneuOpen((v) => !v)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                >
+                  <span className="text-xl">🛞</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-ink">Troféu Pneu</p>
+                    <p className="text-xs text-muted">
+                      {pneu.nome} · {pneu.vezes}× com 6×0
+                    </p>
+                  </div>
+                  <span className={`text-muted transition-transform ${pneuOpen ? "rotate-90" : ""}`}>›</span>
+                </button>
+                {pneuOpen && (
+                  <ul className="flex flex-col gap-1 border-t border-line/60 px-4 py-3">
+                    {pneu.detalhes.length === 0 ? (
+                      <li className="text-xs text-muted">Sem detalhes disponíveis.</li>
+                    ) : (
+                      pneu.detalhes.map((d, i) => (
+                        <li key={i} className="text-xs text-ink">
+                          <span className="font-semibold">
+                            {d.rodada != null ? `Rodada ${d.rodada}` : "Rodada especial"}
+                          </span>{" "}
+                          <span className="text-muted">
+                            — 6×0 para {d.adversarios} (dupla com {d.parceiro})
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
               </div>
             )}
 

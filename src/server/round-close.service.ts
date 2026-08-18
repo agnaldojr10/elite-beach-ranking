@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ResultTier } from "@prisma/client";
+import { getRankingGeral } from "@/server/ranking.service";
 
 type KoMatch = {
   phase: "GRUPOS" | "QUARTAS" | "SEMIFINAL" | "FINAL" | "TERCEIRO";
@@ -95,4 +96,61 @@ export async function encerrarRodada(roundId: string): Promise<{ count: number }
   ]);
 
   return { count: results.length };
+}
+
+const TIER_MEDAL: Record<string, string> = {
+  CAMPEAO: "🥇 Campeão",
+  VICE: "🥈 Vice",
+  TERCEIRO: "🥉 3º lugar",
+  QUARTO: "4️⃣ 4º lugar",
+};
+const brDate = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+
+/**
+ * Monta o texto de compartilhamento de uma rodada encerrada:
+ * pódio da rodada + ranking geral atual. Pronto para o WhatsApp.
+ */
+export async function buildRoundExport(roundId: string): Promise<string> {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    include: { championship: { select: { id: true, nome: true } } },
+  });
+  if (!round) throw new Error("Rodada não encontrada.");
+
+  const results = await prisma.roundResult.findMany({
+    where: { roundId },
+    select: { tier: true, player: { select: { nome: true } } },
+  });
+
+  const primeiro = (nome: string) => nome.split(" ")[0];
+  const byTier = new Map<string, string[]>();
+  for (const r of results) {
+    if (!byTier.has(r.tier)) byTier.set(r.tier, []);
+    byTier.get(r.tier)!.push(primeiro(r.player.nome));
+  }
+
+  const podioLinhas: string[] = [];
+  for (const tier of ["CAMPEAO", "VICE", "TERCEIRO", "QUARTO"]) {
+    const nomes = byTier.get(tier);
+    if (nomes && nomes.length > 0) {
+      podioLinhas.push(`${TIER_MEDAL[tier]}: ${nomes.join(" & ")}`);
+    }
+  }
+
+  const { rows } = await getRankingGeral(round.championship.id);
+  const rankLinhas = rows.map((r) => `${r.posicao}. ${r.nome} — ${r.pontos} pts`);
+
+  const titulo = round.isFinals ? "FINALS" : `Rodada ${round.numero}`;
+  const partes = [
+    `🎾 ${round.championship.nome}`,
+    `📋 ${titulo} · ${brDate(round.data)}`,
+    "",
+    "🏆 Resultado da rodada",
+    ...(podioLinhas.length > 0 ? podioLinhas : ["(sem pódio registrado)"]),
+    "",
+    "📊 Ranking geral",
+    ...(rankLinhas.length > 0 ? rankLinhas : ["(sem pontos ainda)"]),
+  ];
+
+  return partes.join("\n");
 }

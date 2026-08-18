@@ -8,7 +8,13 @@ export type RankingRow = {
   variacao: "up" | "down" | "same";
 };
 
-export type PneuInfo = { playerId: string; nome: string; vezes: number } | null;
+export type PneuDetalhe = { rodada: number | null; adversarios: string; parceiro: string };
+export type PneuInfo = {
+  playerId: string;
+  nome: string;
+  vezes: number;
+  detalhes: PneuDetalhe[];
+} | null;
 
 export type RankingGeral = { rows: RankingRow[]; pneu: PneuInfo };
 
@@ -83,7 +89,13 @@ export async function getPneu(championshipId: string): Promise<PneuInfo> {
         { scoreA: 0, scoreB: 6 },
       ],
     },
-    select: { teamAId: true, teamBId: true, scoreA: true, scoreB: true },
+    select: {
+      teamAId: true,
+      teamBId: true,
+      scoreA: true,
+      scoreB: true,
+      round: { select: { numero: true } },
+    },
   });
   if (matches.length === 0) return null;
 
@@ -96,6 +108,7 @@ export async function getPneu(championshipId: string): Promise<PneuInfo> {
     },
   });
   const teamById = new Map(teams.map((t) => [t.id, t]));
+  const primeiro = (n: string) => n.split(" ")[0];
 
   const count = new Map<string, number>();
   const nome = new Map<string, string>();
@@ -112,5 +125,26 @@ export async function getPneu(championshipId: string): Promise<PneuInfo> {
   if (count.size === 0) return null;
 
   const [playerId, vezes] = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
-  return { playerId, nome: nome.get(playerId) ?? "", vezes };
+
+  // Detalhes dos 6x0 sofridos pelo jogador do pneu.
+  const detalhes: PneuDetalhe[] = [];
+  for (const m of matches) {
+    const loserId = m.scoreA === 6 ? m.teamBId : m.teamAId;
+    const winnerId = m.scoreA === 6 ? m.teamAId : m.teamBId;
+    const loser = teamById.get(loserId);
+    const winner = teamById.get(winnerId);
+    if (!loser || !winner) continue;
+    const isPneu = loser.player1.id === playerId || loser.player2.id === playerId;
+    if (!isPneu) continue;
+    const parceiro =
+      loser.player1.id === playerId ? loser.player2.nome : loser.player1.nome;
+    detalhes.push({
+      rodada: m.round?.numero ?? null,
+      adversarios: `${primeiro(winner.player1.nome)} & ${primeiro(winner.player2.nome)}`,
+      parceiro: primeiro(parceiro),
+    });
+  }
+  detalhes.sort((a, b) => (a.rodada ?? 0) - (b.rodada ?? 0));
+
+  return { playerId, nome: nome.get(playerId) ?? "", vezes, detalhes };
 }

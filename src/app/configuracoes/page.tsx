@@ -4,24 +4,28 @@ import { AppShell } from "@/components/AppShell";
 import { ScoringForm } from "@/components/ScoringForm";
 import { AdminsManager } from "@/components/AdminsManager";
 import { ChangePassword } from "@/components/ChangePassword";
+import { getActiveChampionshipOrSelect } from "@/lib/active-champ";
 
 export const dynamic = "force-dynamic";
 
 export default async function ConfiguracoesPage() {
+  const selecionado = await getActiveChampionshipOrSelect();
   const [champ, admins] = await Promise.all([
-    prisma.championship.findFirst({
-      where: { status: "ATIVA" },
-      select: {
-        id: true,
-        nome: true,
-        ptsParticipacao: true,
-        ptsQuartas: true,
-        pts4: true,
-        pts3: true,
-        ptsVice: true,
-        ptsCampeao: true,
-      },
-    }),
+    selecionado
+      ? prisma.championship.findUnique({
+          where: { id: selecionado.id },
+          select: {
+            id: true,
+            nome: true,
+            ptsParticipacao: true,
+            ptsQuartas: true,
+            pts4: true,
+            pts3: true,
+            ptsVice: true,
+            ptsCampeao: true,
+          },
+        })
+      : Promise.resolve(null),
     prisma.admin.findMany({
       orderBy: { createdAt: "asc" },
       select: { id: true, nome: true, email: true, isOwner: true },

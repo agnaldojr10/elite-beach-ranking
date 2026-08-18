@@ -7,9 +7,10 @@ import { DatePicker } from "@/components/DatePicker";
 import {
   createChampionship,
   generateRounds,
-  setActiveChampionship,
+  setChampionshipStatus,
   updateChampionship,
 } from "@/app/cadastros/campeonatos/actions";
+import { selecionarCampeonato } from "@/app/campeonatos/actions";
 
 type Champ = {
   id: string;
@@ -62,10 +63,21 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
     });
   }
 
-  function activate(id: string) {
+  function alterarStatus(id: string, status: "ATIVA" | "ENCERRADA") {
     startTransition(async () => {
-      const res = await setActiveChampionship(id);
+      const res = await setChampionshipStatus(id, status);
       if (res.ok) router.refresh();
+      else setError(res.error);
+    });
+  }
+
+  function selecionar(id: string) {
+    startTransition(async () => {
+      const res = await selecionarCampeonato(id);
+      if (res.ok) {
+        router.push("/");
+        router.refresh();
+      } else setError(res.error);
     });
   }
 
@@ -118,13 +130,22 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
                     c.status === "ATIVA" ? "bg-success/15 text-success" : "bg-line text-muted"
                   }`}
                 >
-                  {c.status === "ATIVA" ? "Ativo" : "Encerrado"}
+                  {c.status === "ATIVA" ? "Em andamento" : "Encerrado"}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted">
                 {brDate(c.inicio)}–{brDate(c.fim)} · Finals {brDate(c.finalsDate)}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
+                {c.status === "ATIVA" && (
+                  <button
+                    onClick={() => selecionar(c.id)}
+                    disabled={pending}
+                    className="rounded-lg bg-accent px-3 py-2 text-xs font-bold text-accent-ink disabled:opacity-70"
+                  >
+                    Selecionar
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setError(null);
@@ -134,15 +155,6 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
                 >
                   Editar
                 </button>
-                {c.status !== "ATIVA" && (
-                  <button
-                    onClick={() => activate(c.id)}
-                    disabled={pending}
-                    className="rounded-lg bg-accent/15 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-70"
-                  >
-                    Definir como ativo
-                  </button>
-                )}
                 <button
                   onClick={() => {
                     setError(null);
@@ -152,6 +164,23 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
                 >
                   Gerar rodadas
                 </button>
+                {c.status === "ATIVA" ? (
+                  <button
+                    onClick={() => alterarStatus(c.id, "ENCERRADA")}
+                    disabled={pending}
+                    className="rounded-lg bg-danger/15 px-3 py-2 text-xs font-semibold text-danger disabled:opacity-70"
+                  >
+                    Encerrar
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => alterarStatus(c.id, "ATIVA")}
+                    disabled={pending}
+                    className="rounded-lg bg-accent/15 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-70"
+                  >
+                    Reabrir
+                  </button>
+                )}
               </div>
             </li>
           ))}

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { getRankingGeral } from "@/server/ranking.service";
 import { RankingView } from "@/components/RankingView";
+import { getActiveChampionshipOrSelect } from "@/lib/active-champ";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 export default async function RankingPage() {
-  const champ = await prisma.championship.findFirst({ where: { status: "ATIVA" } });
+  const champ = await getActiveChampionshipOrSelect();
   if (!champ) {
     return (
       <AppShell title="Ranking">

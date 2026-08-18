@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { getActiveChampionshipOrSelect } from "@/lib/active-champ";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const brDate = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
 export default async function SorteioPage() {
-  const champ = await prisma.championship.findFirst({ where: { status: "ATIVA" } });
+  const champ = await getActiveChampionshipOrSelect();
 
   if (!champ) {
     return (
@@ -35,12 +36,12 @@ export default async function SorteioPage() {
   return (
     <AppShell title="Sorteio">
       <Link
-        href="/cadastros/campeonatos"
+        href="/campeonatos"
         className="mb-4 inline-flex items-center gap-2 rounded-full border border-line bg-accent/10 px-3 py-1.5 text-xs font-semibold text-ink"
       >
         <span className="h-2 w-2 rounded-full bg-accent" />
         {champ.nome}
-        <span className="text-accent">›</span>
+        <span className="text-accent">⇄</span>
       </Link>
 
       {rounds.length === 0 ? (

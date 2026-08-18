@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { getActiveChampionshipOrSelect } from "@/lib/active-champ";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function HomePage() {
   const session = await auth();
   const nome = session?.user?.name ?? "Admin";
 
-  const champ = await prisma.championship.findFirst({ where: { status: "ATIVA" } });
+  const champ = await getActiveChampionshipOrSelect();
   const rodadaAtual = champ
     ? await prisma.round.findFirst({
         where: { championshipId: champ.id, isFinals: false, status: { not: "ENCERRADA" } },
@@ -39,14 +40,17 @@ export default async function HomePage() {
         <p className="text-2xl font-bold text-ink">Olá, {nome}</p>
         {champ ? (
           <Link
-            href="/cadastros/campeonatos"
+            href="/campeonatos"
             className="mt-2 inline-flex items-center gap-2 rounded-full border border-line bg-accent/10 px-3 py-1.5 text-xs font-semibold text-ink"
           >
             <span className="h-2 w-2 rounded-full bg-accent" />
             {champ.nome}
+            <span className="text-accent">⇄</span>
           </Link>
         ) : (
-          <p className="mt-1 text-sm text-muted">Nenhum campeonato ativo</p>
+          <Link href="/cadastros/campeonatos" className="mt-1 inline-block text-sm text-ocean">
+            Nenhum campeonato ativo — criar
+          </Link>
         )}
       </header>
 

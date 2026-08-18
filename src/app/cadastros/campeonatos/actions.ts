@@ -28,21 +28,18 @@ export async function createChampionship(input: ChampionshipInput): Promise<Acti
   const parsed = ChampionshipInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const v = parsed.data;
-  // Novo campeonato entra como ATIVA; os demais viram ENCERRADA.
-  await prisma.$transaction([
-    prisma.championship.updateMany({ where: { status: "ATIVA" }, data: { status: "ENCERRADA" } }),
-    prisma.championship.create({
-      data: {
-        nome: v.nome,
-        temporada: v.temporada,
-        formato: v.formato,
-        inicio: toDate(v.inicio),
-        fim: toDate(v.fim),
-        finalsDate: toDate(v.finalsDate),
-        status: "ATIVA",
-      },
-    }),
-  ]);
+  // Podem existir vários campeonatos em andamento ao mesmo tempo.
+  await prisma.championship.create({
+    data: {
+      nome: v.nome,
+      temporada: v.temporada,
+      formato: v.formato,
+      inicio: toDate(v.inicio),
+      fim: toDate(v.fim),
+      finalsDate: toDate(v.finalsDate),
+      status: "ATIVA",
+    },
+  });
   revalidatePath(PATH);
   return { ok: true };
 }
@@ -70,13 +67,14 @@ export async function updateChampionship(
   return { ok: true };
 }
 
-export async function setActiveChampionship(id: string): Promise<ActionResult> {
+export async function setChampionshipStatus(
+  id: string,
+  status: "ATIVA" | "ENCERRADA",
+): Promise<ActionResult> {
   await requireAdmin();
-  await prisma.$transaction([
-    prisma.championship.updateMany({ where: { status: "ATIVA" }, data: { status: "ENCERRADA" } }),
-    prisma.championship.update({ where: { id }, data: { status: "ATIVA" } }),
-  ]);
+  await prisma.championship.update({ where: { id }, data: { status } });
   revalidatePath(PATH);
+  revalidatePath("/");
   return { ok: true };
 }
 

@@ -9,7 +9,7 @@ const { auth } = NextAuth(authConfig);
 export default auth;
 
 export const config = {
-  matcher: [
-    "/((?!api/auth|api/health|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/).*)",
-  ],
+  // Protege as páginas, mas libera a API de auth/health e QUALQUER arquivo
+  // estático (com extensão): logo.svg, sw.js, manifest.webmanifest, ícones…
+  matcher: ["/((?!api/auth|api/health|_next/static|_next/image|.*\\..*).*)"],
 };

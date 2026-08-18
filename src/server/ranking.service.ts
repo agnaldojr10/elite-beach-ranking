@@ -108,7 +108,6 @@ export async function getPneu(championshipId: string): Promise<PneuInfo> {
     },
   });
   const teamById = new Map(teams.map((t) => [t.id, t]));
-  const primeiro = (n: string) => n.split(" ")[0];
 
   const count = new Map<string, number>();
   const nome = new Map<string, string>();
@@ -140,8 +139,8 @@ export async function getPneu(championshipId: string): Promise<PneuInfo> {
       loser.player1.id === playerId ? loser.player2.nome : loser.player1.nome;
     detalhes.push({
       rodada: m.round?.numero ?? null,
-      adversarios: `${primeiro(winner.player1.nome)} & ${primeiro(winner.player2.nome)}`,
-      parceiro: primeiro(parceiro),
+      adversarios: `${winner.player1.nome} & ${winner.player2.nome}`,
+      parceiro,
     });
   }
   detalhes.sort((a, b) => (a.rodada ?? 0) - (b.rodada ?? 0));

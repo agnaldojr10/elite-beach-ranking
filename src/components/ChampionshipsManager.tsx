@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { DatePicker } from "@/components/DatePicker";
 import {
   createChampionship,
   generateRounds,
@@ -194,30 +195,26 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
             <div className="mb-3 flex gap-3">
               <div className="flex-1">
                 <label className={label}>Início</label>
-                <input
-                  type="date"
+                <DatePicker
                   value={draft.inicio}
-                  onChange={(e) => setDraft({ ...draft, inicio: e.target.value })}
-                  className={field}
+                  onChange={(iso) => setDraft({ ...draft, inicio: iso })}
                 />
               </div>
               <div className="flex-1">
                 <label className={label}>Fim</label>
-                <input
-                  type="date"
+                <DatePicker
                   value={draft.fim}
-                  onChange={(e) => setDraft({ ...draft, fim: e.target.value })}
-                  className={field}
+                  onChange={(iso) => setDraft({ ...draft, fim: iso })}
                 />
               </div>
             </div>
             <label className={label}>Data da FINALS</label>
-            <input
-              type="date"
-              value={draft.finalsDate}
-              onChange={(e) => setDraft({ ...draft, finalsDate: e.target.value })}
-              className={`${field} mb-3`}
-            />
+            <div className="mb-3">
+              <DatePicker
+                value={draft.finalsDate}
+                onChange={(iso) => setDraft({ ...draft, finalsDate: iso })}
+              />
+            </div>
 
             {error && <p className="mb-2 text-sm font-semibold text-danger">{error}</p>}
             <button
@@ -254,12 +251,9 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
               className={`${field} mb-3`}
             />
             <label className={label}>Data da 1ª rodada</label>
-            <input
-              type="date"
-              value={gen.inicio}
-              onChange={(e) => setGen({ ...gen, inicio: e.target.value })}
-              className={`${field} mb-2`}
-            />
+            <div className="mb-2">
+              <DatePicker value={gen.inicio} onChange={(iso) => setGen({ ...gen, inicio: iso })} />
+            </div>
             <p className="mb-2 text-xs text-muted">
               Cria uma rodada por semana; a última já vem com peso 2x e a FINALS é criada como
               etapa especial.

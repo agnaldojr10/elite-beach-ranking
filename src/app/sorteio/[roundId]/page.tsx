@@ -10,8 +10,6 @@ import { getRankingGeral } from "@/server/ranking.service";
 
 export const dynamic = "force-dynamic";
 
-const primeiro = (nome: string) => nome.split(" ")[0];
-
 const KO_ORDER: Record<string, number> = { QUARTAS: 0, SEMIFINAL: 1, FINAL: 2, TERCEIRO: 3 };
 const KO_LABEL: Record<string, string> = {
   QUARTAS: "Quartas de final",
@@ -99,7 +97,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
 
   const presentes = attendances.map((a) => a.playerId);
   const teamLabel = new Map(
-    teams.map((t) => [t.id, `${primeiro(t.player1.nome)} & ${primeiro(t.player2.nome)}`]),
+    teams.map((t) => [t.id, `${t.player1.nome} & ${t.player2.nome}`]),
   );
 
   // Grupos: duplas + jogos + classificação

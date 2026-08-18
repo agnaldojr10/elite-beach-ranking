@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { shareText } from "@/lib/share";
+import { isValidBeachScore } from "@/lib/score";
 import {
   confirmarDuplas,
   encerrar,
@@ -41,21 +42,6 @@ function parseScore(raw: string): [number, number] | null {
   const digits = s.replace(/\D/g, "");
   if (digits.length === 2) return [parseInt(digits[0], 10), parseInt(digits[1], 10)];
   return null;
-}
-
-/**
- * Regra do beach tennis (set único): vence quem chega a 6 games (0–5 do
- * adversário). Em 6/6 joga-se o tiebreak e o vencedor é declarado 7/6.
- * Logo, placares válidos: 6×{0..5}, {0..5}×6, 7×6 e 6×7. Sem empates.
- */
-function isValidBeachScore(a: number, b: number): boolean {
-  if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) return false;
-  if (a === b) return false;
-  const hi = Math.max(a, b);
-  const lo = Math.min(a, b);
-  if (hi === 6 && lo >= 0 && lo <= 5) return true;
-  if (hi === 7 && lo === 6) return true;
-  return false;
 }
 
 function MatchRow({

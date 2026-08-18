@@ -122,11 +122,10 @@ export async function buildRoundExport(roundId: string): Promise<string> {
     select: { tier: true, player: { select: { nome: true } } },
   });
 
-  const primeiro = (nome: string) => nome.split(" ")[0];
   const byTier = new Map<string, string[]>();
   for (const r of results) {
     if (!byTier.has(r.tier)) byTier.set(r.tier, []);
-    byTier.get(r.tier)!.push(primeiro(r.player.nome));
+    byTier.get(r.tier)!.push(r.player.nome);
   }
 
   const podioLinhas: string[] = [];

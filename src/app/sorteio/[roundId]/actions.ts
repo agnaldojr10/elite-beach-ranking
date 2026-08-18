@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth-guard";
 import { generateDraw } from "@/server/draw.service";
 import { syncKnockout } from "@/server/knockout.service";
 import { buildRoundExport, encerrarRodada } from "@/server/round-close.service";
+import { isValidBeachScore } from "@/lib/score";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ExportResult = { ok: true; text: string } | { ok: false; error: string };
@@ -51,8 +52,8 @@ export async function saveScore(
   scoreB: number,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!Number.isInteger(scoreA) || !Number.isInteger(scoreB) || scoreA < 0 || scoreB < 0) {
-    return { ok: false, error: "Placar inválido." };
+  if (!isValidBeachScore(scoreA, scoreB)) {
+    return { ok: false, error: "Placar inválido para o beach tennis (ex.: 6×0..6×4, 7×5, 7×6)." };
   }
   const match = await prisma.match.update({
     where: { id: matchId },

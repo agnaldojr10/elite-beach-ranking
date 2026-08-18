@@ -23,7 +23,6 @@ const initials = (nome: string) => {
   const p = nome.trim().split(/\s+/);
   return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase();
 };
-const primeiro = (nome: string) => nome.split(" ")[0];
 
 const VAR: Record<Row["variacao"], { icon: string; cls: string }> = {
   up: { icon: "▲", cls: "text-success" },
@@ -48,7 +47,7 @@ function Podium({ rows }: { rows: Row[] }) {
           >
             {initials(r.nome)}
           </div>
-          <p className="text-center text-xs font-semibold text-ink">{primeiro(r.nome)}</p>
+          <p className="text-center text-xs font-semibold leading-tight text-ink">{r.nome}</p>
           <p className="text-[11px] text-muted">{r.pontos} pts</p>
           <div
             className={`flex w-full ${heights[i]} items-start justify-center rounded-t-xl pt-2 text-lg font-extrabold ${medal[i]}`}

@@ -7,10 +7,30 @@ import { getActiveChampionshipOrSelect } from "@/lib/active-champ";
 export const dynamic = "force-dynamic";
 
 const CARDS = [
-  { href: "/ranking", title: "Ranking", desc: "Classificação geral e por rodada" },
-  { href: "/sorteio", title: "Sorteio", desc: "Rodadas e duplas" },
-  { href: "/cadastros/jogadores", title: "Cadastros", desc: "Jogadores e campeonatos" },
-  { href: "/configuracoes", title: "Configurações", desc: "Pontuação, admins e preferências" },
+  {
+    href: "/ranking",
+    title: "Ranking",
+    desc: "Classificação geral e por rodada",
+    icon: <path d="M8 4h8v4a4 4 0 0 1-8 0V4zM9 16h6M12 12v4M8 20h8M6 5H4v2a3 3 0 0 0 3 3M18 5h2v2a3 3 0 0 1-3 3" />,
+  },
+  {
+    href: "/sorteio",
+    title: "Sorteio",
+    desc: "Rodadas e duplas",
+    icon: <path d="M4 7h3l7 10h4M4 17h3l2.4-3.4M14 7h4M17 4l3 3-3 3M17 14l3 3-3 3" />,
+  },
+  {
+    href: "/cadastros/jogadores",
+    title: "Cadastros",
+    desc: "Jogadores e campeonatos",
+    icon: <path d="M9 8a3.2 3.2 0 1 0 0-.01M3.5 20a5.6 5.6 0 0 1 11 0M17.5 9.2a2.4 2.4 0 1 0 0-.01M15.3 20a4.6 4.6 0 0 1 6.2-4.3" />,
+  },
+  {
+    href: "/configuracoes",
+    title: "Configurações",
+    desc: "Pontuação, admins e preferências",
+    icon: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />,
+  },
 ];
 
 const STATUS_LABEL: Record<string, string> = {
@@ -75,10 +95,26 @@ export default async function HomePage() {
           <Link
             key={c.href}
             href={c.href}
-            className="flex min-h-[132px] flex-col justify-between rounded-3xl border border-line bg-card p-5"
+            className="flex min-h-[140px] flex-col justify-between rounded-3xl border border-line bg-card p-5"
           >
-            <span className="text-base font-bold text-ink">{c.title}</span>
-            <span className="text-xs leading-snug text-muted">{c.desc}</span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-accent">
+              <svg
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {c.icon}
+              </svg>
+            </span>
+            <span className="mt-3 block">
+              <span className="block text-base font-bold text-ink">{c.title}</span>
+              <span className="block text-xs leading-snug text-muted">{c.desc}</span>
+            </span>
           </Link>
         ))}
       </div>

@@ -6,19 +6,28 @@ import { resolveActiveChampionship } from "@/lib/active-champ";
 export const dynamic = "force-dynamic";
 
 export default async function CampeonatosPage() {
-  const [ativas, { champ: atual }] = await Promise.all([
+  const [todos, { champ: atual }] = await Promise.all([
     prisma.championship.findMany({
-      where: { status: "ATIVA" },
       orderBy: { createdAt: "desc" },
-      select: { id: true, nome: true, temporada: true },
+      select: {
+        id: true,
+        nome: true,
+        temporada: true,
+        status: true,
+        bannerUrl: true,
+        logoUrl: true,
+      },
     }),
     resolveActiveChampionship(),
   ]);
 
-  const campeonatos = ativas.map((c) => ({
+  const campeonatos = todos.map((c) => ({
     id: c.id,
     nome: c.nome,
     temporada: c.temporada,
+    status: c.status,
+    bannerUrl: c.bannerUrl,
+    logoUrl: c.logoUrl,
     selecionado: atual?.id === c.id,
   }));
 

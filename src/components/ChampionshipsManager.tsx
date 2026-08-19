@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { DatePicker } from "@/components/DatePicker";
+import { ImageUpload } from "@/components/ImageUpload";
 import {
   createChampionship,
   generateRounds,
@@ -21,9 +22,28 @@ type Champ = {
   inicio: string;
   fim: string;
   finalsDate: string;
+  bannerUrl: string | null;
+  logoUrl: string | null;
+  ptsParticipacao: number;
+  ptsQuartas: number;
+  pts4: number;
+  pts3: number;
+  ptsVice: number;
+  ptsCampeao: number;
+  lastRoundDouble: boolean;
 };
 type Draft = Omit<Champ, "status" | "id"> & { id?: string };
 type GenState = { id: string; qtd: number; inicio: string };
+
+type PtsKey = "ptsParticipacao" | "ptsQuartas" | "pts4" | "pts3" | "ptsVice" | "ptsCampeao";
+const PONTOS: { key: PtsKey; label: string }[] = [
+  { key: "ptsParticipacao", label: "Participação" },
+  { key: "ptsQuartas", label: "Quartas" },
+  { key: "pts4", label: "4º lugar" },
+  { key: "pts3", label: "3º lugar" },
+  { key: "ptsVice", label: "Vice" },
+  { key: "ptsCampeao", label: "Campeão" },
+];
 
 const brDate = (iso: string) => {
   const [y, m, d] = iso.split("-");
@@ -48,6 +68,15 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
     inicio: "",
     fim: "",
     finalsDate: "",
+    bannerUrl: null,
+    logoUrl: null,
+    ptsParticipacao: 10,
+    ptsQuartas: 20,
+    pts4: 40,
+    pts3: 60,
+    ptsVice: 80,
+    ptsCampeao: 100,
+    lastRoundDouble: true,
   });
 
   function save() {
@@ -221,6 +250,24 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
               onChange={(e) => setDraft({ ...draft, formato: e.target.value })}
               className={`${field} mb-3`}
             />
+
+            <label className={label}>Banner do campeonato</label>
+            <div className="mb-3">
+              <ImageUpload
+                value={draft.bannerUrl}
+                onChange={(url) => setDraft({ ...draft, bannerUrl: url })}
+                aspect="wide"
+              />
+            </div>
+
+            <label className={label}>Logo do campeonato</label>
+            <div className="mb-3">
+              <ImageUpload
+                value={draft.logoUrl}
+                onChange={(url) => setDraft({ ...draft, logoUrl: url })}
+                aspect="square"
+              />
+            </div>
             <div className="mb-3 flex gap-3">
               <div className="flex-1">
                 <label className={label}>Início</label>
@@ -243,6 +290,49 @@ export function ChampionshipsManager({ campeonatos }: { campeonatos: Champ[] }) 
                 value={draft.finalsDate}
                 onChange={(iso) => setDraft({ ...draft, finalsDate: iso })}
               />
+            </div>
+
+            <label className={label}>Pontuação por posição</label>
+            <div className="mb-3 rounded-xl border border-line bg-card p-3">
+              {PONTOS.map((p) => (
+                <div
+                  key={p.key}
+                  className="flex items-center justify-between border-b border-line py-2 last:border-0"
+                >
+                  <span className="text-sm text-ink">{p.label}</span>
+                  <input
+                    inputMode="numeric"
+                    value={draft[p.key] as number}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        [p.key]: parseInt(e.target.value.replace(/\D/g, "")) || 0,
+                      })
+                    }
+                    className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-center text-sm font-semibold text-ink outline-none focus:border-accent"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-card px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-ink">Última etapa vale 2x</p>
+                <p className="text-xs text-muted">Ao gerar as rodadas, a última recebe peso 2x.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDraft({ ...draft, lastRoundDouble: !draft.lastRoundDouble })}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+                  draft.lastRoundDouble ? "bg-accent" : "bg-line"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+                    draft.lastRoundDouble ? "left-[22px]" : "left-0.5"
+                  }`}
+                />
+              </button>
             </div>
 
             {error && <p className="mb-2 text-sm font-semibold text-danger">{error}</p>}

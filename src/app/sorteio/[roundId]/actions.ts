@@ -181,6 +181,43 @@ export async function encerrar(roundId: string): Promise<ActionResult> {
   }
 }
 
+export async function reabrirRodada(roundId: string): Promise<ActionResult> {
+  await requireAdmin();
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { status: true, isFinals: true },
+  });
+  if (!round) return { ok: false, error: "Rodada não encontrada." };
+  if (round.status !== "ENCERRADA") return { ok: false, error: "A rodada não está encerrada." };
+  // Remove os pontos aplicados e volta a rodada para edição (times/jogos ficam).
+  await prisma.$transaction([
+    prisma.roundResult.deleteMany({ where: { roundId } }),
+    prisma.round.update({
+      where: { id: roundId },
+      data: { status: round.isFinals ? "AGENDADA" : "SORTEADA" },
+    }),
+  ]);
+  revalidatePath(`/sorteio/${roundId}`);
+  revalidatePath("/ranking");
+  return { ok: true };
+}
+
+export async function refazerMataMata(roundId: string): Promise<ActionResult> {
+  await requireAdmin();
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { status: true },
+  });
+  if (!round) return { ok: false, error: "Rodada não encontrada." };
+  if (round.status === "ENCERRADA") {
+    return { ok: false, error: "Reabra a rodada antes de refazer o mata-mata." };
+  }
+  // Apaga o mata-mata atual; será recriado a partir da classificação corrigida.
+  await prisma.match.deleteMany({ where: { roundId, phase: { not: "GRUPOS" } } });
+  revalidatePath(`/sorteio/${roundId}`);
+  return { ok: true };
+}
+
 export async function exportRodada(roundId: string): Promise<ExportResult> {
   await requireAdmin();
   try {

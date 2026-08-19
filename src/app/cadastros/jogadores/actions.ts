@@ -13,8 +13,10 @@ export async function createPlayer(input: PlayerInput): Promise<ActionResult> {
   await requireAdmin();
   const parsed = PlayerInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const { nome, email, type } = parsed.data;
-  await prisma.player.create({ data: { nome, email: email || null, type } });
+  const { nome, email, photoUrl, type } = parsed.data;
+  await prisma.player.create({
+    data: { nome, email: email || null, photoUrl: photoUrl || null, type },
+  });
   revalidatePath(PATH);
   return { ok: true };
 }
@@ -23,8 +25,11 @@ export async function updatePlayer(id: string, input: PlayerInput): Promise<Acti
   await requireAdmin();
   const parsed = PlayerInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const { nome, email, type } = parsed.data;
-  await prisma.player.update({ where: { id }, data: { nome, email: email || null, type } });
+  const { nome, email, photoUrl, type } = parsed.data;
+  await prisma.player.update({
+    where: { id },
+    data: { nome, email: email || null, photoUrl: photoUrl || null, type },
+  });
   revalidatePath(PATH);
   return { ok: true };
 }

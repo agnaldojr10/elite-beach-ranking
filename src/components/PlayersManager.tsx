@@ -8,10 +8,23 @@ import {
   createPlayer,
   updatePlayer,
 } from "@/app/cadastros/jogadores/actions";
+import { ImageUpload } from "@/components/ImageUpload";
 
-type Player = { id: string; nome: string; email: string | null; type: "REGULAR" | "GUEST" };
+type Player = {
+  id: string;
+  nome: string;
+  email: string | null;
+  photoUrl: string | null;
+  type: "REGULAR" | "GUEST";
+};
 type Filter = "todos" | "REGULAR" | "GUEST";
-type Draft = { id?: string; nome: string; email: string; type: "REGULAR" | "GUEST" };
+type Draft = {
+  id?: string;
+  nome: string;
+  email: string;
+  photoUrl: string | null;
+  type: "REGULAR" | "GUEST";
+};
 
 function initials(nome: string) {
   const p = nome.trim().split(/\s+/);
@@ -36,7 +49,12 @@ export function PlayersManager({ players }: { players: Player[] }) {
   function save() {
     if (!draft) return;
     setError(null);
-    const input = { nome: draft.nome, email: draft.email, type: draft.type };
+    const input = {
+      nome: draft.nome,
+      email: draft.email,
+      photoUrl: draft.photoUrl,
+      type: draft.type,
+    };
     startTransition(async () => {
       const res = draft.id
         ? await updatePlayer(draft.id, input)
@@ -106,7 +124,7 @@ export function PlayersManager({ players }: { players: Player[] }) {
       <button
         onClick={() => {
           setError(null);
-          setDraft({ nome: "", email: "", type: "REGULAR" });
+          setDraft({ nome: "", email: "", photoUrl: null, type: "REGULAR" });
         }}
         className="rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink"
       >
@@ -122,13 +140,24 @@ export function PlayersManager({ players }: { players: Player[] }) {
               <button
                 onClick={() => {
                   setError(null);
-                  setDraft({ id: p.id, nome: p.nome, email: p.email ?? "", type: p.type });
+                  setDraft({
+                    id: p.id,
+                    nome: p.nome,
+                    email: p.email ?? "",
+                    photoUrl: p.photoUrl,
+                    type: p.type,
+                  });
                 }}
                 className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ocean/15 text-xs font-bold text-ocean">
-                  {initials(p.nome)}
-                </span>
+                {p.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.photoUrl} alt={p.nome} className="h-9 w-9 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ocean/15 text-xs font-bold text-ocean">
+                    {initials(p.nome)}
+                  </span>
+                )}
                 <span className="flex-1 truncate text-sm font-semibold text-ink">{p.nome}</span>
                 <span
                   className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold ${
@@ -158,6 +187,15 @@ export function PlayersManager({ players }: { players: Player[] }) {
               <button onClick={() => setDraft(null)} className="text-muted">
                 ✕
               </button>
+            </div>
+
+            <label className="mb-1 block text-xs font-semibold text-muted">Foto</label>
+            <div className="mb-3">
+              <ImageUpload
+                value={draft.photoUrl}
+                onChange={(url) => setDraft({ ...draft, photoUrl: url })}
+                aspect="square"
+              />
             </div>
 
             <label className="mb-1 block text-xs font-semibold text-muted">Nome</label>

@@ -65,6 +65,7 @@ model Player {
   id        String     @id @default(cuid())
   nome      String
   email     String?
+  photoUrl  String? // foto do jogador (Vercel Blob) — pensando no acesso futuro deles
   type      PlayerType @default(REGULAR) // GUEST nunca pontua
   active    Boolean    @default(true) // soft delete
   createdAt DateTime   @default(now())
@@ -81,10 +82,12 @@ model Championship {
   nome       String
   temporada  String
   formato    String
-  status     ChampionshipStatus @default(ATIVA) // só um ATIVA por vez (regra na aplicação)
+  status     ChampionshipStatus @default(ATIVA) // ATIVA = em andamento (podem ser vários)
   inicio     DateTime           @db.Date
   fim        DateTime           @db.Date
   finalsDate DateTime           @db.Date
+  bannerUrl  String? // banner do campeonato (Vercel Blob) — exibido na seleção
+  logoUrl    String? // logo do campeonato (Vercel Blob)
   createdAt  DateTime           @default(now())
 
   // tabela de pontos POR CAMPEONATO (defaults da temporada atual)
@@ -94,6 +97,9 @@ model Championship {
   pts3            Int @default(60)
   ptsVice         Int @default(80)
   ptsCampeao      Int @default(100)
+
+  // última etapa vale em dobro (2x) — configurável por campeonato
+  lastRoundDouble Boolean @default(true)
 
   rounds Round[]
 }

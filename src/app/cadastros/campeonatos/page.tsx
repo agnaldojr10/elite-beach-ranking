@@ -18,6 +18,15 @@ export default async function CampeonatosPage() {
       inicio: true,
       fim: true,
       finalsDate: true,
+      bannerUrl: true,
+      logoUrl: true,
+      ptsParticipacao: true,
+      ptsQuartas: true,
+      pts4: true,
+      pts3: true,
+      ptsVice: true,
+      ptsCampeao: true,
+      lastRoundDouble: true,
     },
   });
 
@@ -30,6 +39,15 @@ export default async function CampeonatosPage() {
     inicio: iso(c.inicio),
     fim: iso(c.fim),
     finalsDate: iso(c.finalsDate),
+    bannerUrl: c.bannerUrl,
+    logoUrl: c.logoUrl,
+    ptsParticipacao: c.ptsParticipacao,
+    ptsQuartas: c.ptsQuartas,
+    pts4: c.pts4,
+    pts3: c.pts3,
+    ptsVice: c.ptsVice,
+    ptsCampeao: c.ptsCampeao,
+    lastRoundDouble: c.lastRoundDouble,
   }));
 
   return (

@@ -10,6 +10,8 @@ import {
   exportRodada,
   gerarMataMata,
   quickAddGuest,
+  reabrirRodada,
+  refazerMataMata,
   saveDrawConfig,
   saveScore,
   sortear,
@@ -287,6 +289,26 @@ export function RoundConsole({
       else setError(exp.error);
     });
   }
+  function doReabrir() {
+    if (!confirm("Reabrir a rodada remove os pontos aplicados e libera a edição dos placares. Continuar?")) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await reabrirRodada(roundId);
+      if (res.ok) {
+        setExpanded("jogos");
+        router.refresh();
+      } else setError(res.error);
+    });
+  }
+  function doRefazerMataMata() {
+    if (!confirm("Refazer o mata-mata apaga os confrontos atuais e recria a partir da classificação. Continuar?")) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await refazerMataMata(roundId);
+      if (res.ok) router.refresh();
+      else setError(res.error);
+    });
+  }
 
   const steps: {
     key: StepKey;
@@ -503,6 +525,11 @@ export function RoundConsole({
                 </div>
               ))
             )}
+            {mataMata.length > 0 && !encerrada && (
+              <button onClick={doRefazerMataMata} disabled={pending} className="mt-1 w-full rounded-xl bg-warning/15 py-2 text-xs font-semibold text-warning disabled:opacity-70">
+                Refazer mata-mata
+              </button>
+            )}
           </div>
           {jogosCompletos && !encerrada && (
             <button onClick={() => setExpanded("encerrar")} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink">
@@ -525,6 +552,9 @@ export function RoundConsole({
           </p>
           <button onClick={doExport} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
             {pending ? "Gerando…" : "Compartilhar resultado + ranking"}
+          </button>
+          <button onClick={doReabrir} disabled={pending} className="w-full rounded-xl bg-warning/15 py-3 text-sm font-bold text-warning disabled:opacity-70">
+            Reabrir rodada (corrigir placar)
           </button>
         </div>
       ) : (

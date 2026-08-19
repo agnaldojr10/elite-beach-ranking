@@ -37,6 +37,15 @@ export async function createChampionship(input: ChampionshipInput): Promise<Acti
       inicio: toDate(v.inicio),
       fim: toDate(v.fim),
       finalsDate: toDate(v.finalsDate),
+      bannerUrl: v.bannerUrl || null,
+      logoUrl: v.logoUrl || null,
+      ptsParticipacao: v.ptsParticipacao,
+      ptsQuartas: v.ptsQuartas,
+      pts4: v.pts4,
+      pts3: v.pts3,
+      ptsVice: v.ptsVice,
+      ptsCampeao: v.ptsCampeao,
+      lastRoundDouble: v.lastRoundDouble,
       status: "ATIVA",
     },
   });
@@ -61,9 +70,19 @@ export async function updateChampionship(
       inicio: toDate(v.inicio),
       fim: toDate(v.fim),
       finalsDate: toDate(v.finalsDate),
+      bannerUrl: v.bannerUrl || null,
+      logoUrl: v.logoUrl || null,
+      ptsParticipacao: v.ptsParticipacao,
+      ptsQuartas: v.ptsQuartas,
+      pts4: v.pts4,
+      pts3: v.pts3,
+      ptsVice: v.ptsVice,
+      ptsCampeao: v.ptsCampeao,
+      lastRoundDouble: v.lastRoundDouble,
     },
   });
   revalidatePath(PATH);
+  revalidatePath("/campeonatos");
   return { ok: true };
 }
 
@@ -96,11 +115,12 @@ export async function generateRounds(
     return { ok: false, error: "Este campeonato já tem rodadas. Apague-as antes de gerar de novo." };
   }
 
+  const pesoUltima = champ.lastRoundDouble ? 2 : 1;
   const rounds: Prisma.RoundCreateManyInput[] = Array.from({ length: qtd }, (_, i) => ({
     championshipId,
     numero: i + 1,
     data: addDays(inicio, 7 * i),
-    peso: i === qtd - 1 ? 2 : 1, // última etapa vale em dobro
+    peso: i === qtd - 1 ? pesoUltima : 1, // última etapa 2x se configurado
   }));
   rounds.push({
     championshipId,

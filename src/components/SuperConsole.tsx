@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { shareText } from "@/lib/share";
 import { parseScorePair } from "@/lib/score";
+import { SuperPodium } from "@/components/SuperPodium";
 import {
   exportTorneio,
   salvarPlacarSuper,
@@ -255,6 +256,13 @@ export function SuperConsole({
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div className="mt-1">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+              Pódio para compartilhar
+            </p>
+            <SuperPodium titulo={nome} size={size} standings={standings} />
           </div>
         </div>
       )}

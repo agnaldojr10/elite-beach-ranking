@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { BackLink } from "@/components/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +42,7 @@ export default async function JogadorPage({ params }: { params: Promise<{ id: st
 
   return (
     <AppShell title="Jogador">
-      <Link href="/ranking" className="mb-3 inline-block text-sm text-ocean">
-        ‹ Ranking
-      </Link>
+      <BackLink href="/ranking">Ranking</BackLink>
 
       <div className="mb-4 flex items-center gap-4 rounded-2xl border border-line bg-card p-4">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ocean/15 text-lg font-bold text-ocean">

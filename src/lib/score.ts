@@ -1,4 +1,19 @@
 /**
+ * Interpreta o placar digitado. Aceita separadores (6-2, 6/2, 6x2, 6 2) e
+ * dois dígitos colados (62 → 6-2), para lançamento rápido. Retorna [a, b] ou
+ * null se não conseguir ler. Usado no ranking e no torneio (mesma máscara).
+ */
+export function parseScorePair(raw: string): [number, number] | null {
+  const s = raw.trim();
+  if (!s) return null;
+  const sep = s.match(/^(\d+)\s*[-/x:.\s]\s*(\d+)$/i);
+  if (sep) return [parseInt(sep[1], 10), parseInt(sep[2], 10)];
+  const digits = s.replace(/\D/g, "");
+  if (digits.length === 2) return [parseInt(digits[0], 10), parseInt(digits[1], 10)];
+  return null;
+}
+
+/**
  * Regra de placar do beach tennis (set único):
  * - vence quem chega a 6 games com 2 de vantagem → 6×0..6×4;
  * - em 5×5 é preciso abrir 2 games → 7×5 (6×5 NÃO vale);

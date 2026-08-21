@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { RoundConsole } from "@/components/RoundConsole";
 import { RoundSummaryCard } from "@/components/RoundSummaryCard";
 import { FinalsConsole } from "@/components/FinalsConsole";
+import { BackLink } from "@/components/BackLink";
 import { buildGroupStandings, groupsComplete } from "@/server/knockout.service";
 import { getRankingGeral } from "@/server/ranking.service";
 
@@ -55,9 +55,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
         : null;
     return (
       <AppShell title="FINALS">
-        <Link href="/sorteio" className="mb-3 inline-block text-sm text-ocean">
-          ‹ Rodadas
-        </Link>
+        <BackLink href="/sorteio">Rodadas</BackLink>
         <FinalsConsole roundId={round.id} classificados={classificados} registrado={registrado} />
       </AppShell>
     );
@@ -147,9 +145,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
 
   return (
     <AppShell title={`Rodada ${round.numero}`}>
-      <Link href="/sorteio" className="mb-3 inline-block text-sm text-ocean">
-        ‹ Rodadas
-      </Link>
+      <BackLink href="/sorteio">Rodadas</BackLink>
 
       <RoundSummaryCard
         roundId={round.id}

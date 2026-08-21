@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { shareText } from "@/lib/share";
-import { isValidBeachScore } from "@/lib/score";
+import { isValidBeachScore, parseScorePair } from "@/lib/score";
 import {
   confirmarDuplas,
   encerrar,
@@ -31,21 +31,6 @@ type KoJogo = Jogo & { phaseLabel: string };
 type Config = { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number };
 type StepKey = "presenca" | "config" | "sortear" | "jogos" | "encerrar";
 
-/**
- * Interpreta o placar digitado. Aceita separadores (6-2, 6/2, 6x2, 6 2) e
- * também dois dígitos colados (62 → 6-2), já que no beach tennis cada lado é
- * um único dígito (0–7). Retorna [a, b] ou null se não conseguir ler.
- */
-function parseScore(raw: string): [number, number] | null {
-  const s = raw.trim();
-  if (!s) return null;
-  const sep = s.match(/^(\d+)\s*[-/x:.\s]\s*(\d+)$/i);
-  if (sep) return [parseInt(sep[1], 10), parseInt(sep[2], 10)];
-  const digits = s.replace(/\D/g, "");
-  if (digits.length === 2) return [parseInt(digits[0], 10), parseInt(digits[1], 10)];
-  return null;
-}
-
 function MatchRow({
   m,
   disabled,
@@ -65,7 +50,7 @@ function MatchRow({
       setErr(null);
       return;
     }
-    const parsed = parseScore(raw);
+    const parsed = parseScorePair(raw);
     if (!parsed) {
       setErr("Use o formato 6-2");
       return;

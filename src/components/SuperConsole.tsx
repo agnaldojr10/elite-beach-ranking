@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { shareText } from "@/lib/share";
+import { parseScorePair } from "@/lib/score";
 import {
   exportTorneio,
   salvarPlacarSuper,
@@ -33,12 +34,6 @@ const initials = (nome: string) => {
   return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase();
 };
 
-function parseScore(raw: string): [number, number] | null {
-  const m = raw.trim().match(/^(\d+)\s*[-/x:.\s]\s*(\d+)$/i);
-  if (!m) return null;
-  return [parseInt(m[1], 10), parseInt(m[2], 10)];
-}
-
 function MatchRow({
   jogo,
   total,
@@ -60,7 +55,7 @@ function MatchRow({
       setErr(null);
       return;
     }
-    const parsed = parseScore(raw);
+    const parsed = parseScorePair(raw);
     if (!parsed) {
       setErr("Use o formato 4-3");
       return;

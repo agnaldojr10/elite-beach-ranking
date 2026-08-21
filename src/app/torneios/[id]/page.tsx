@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { BackLink } from "@/components/BackLink";
 import { SuperConsole } from "@/components/SuperConsole";
 import { getSuperStandings } from "@/server/super.service";
 
@@ -43,9 +43,7 @@ export default async function TorneioPage({ params }: { params: Promise<{ id: st
 
   return (
     <AppShell title={`Super ${t.size}`}>
-      <Link href="/torneios" className="mb-3 inline-block text-sm text-ocean">
-        ‹ Torneios
-      </Link>
+      <BackLink href="/torneios">Torneios</BackLink>
       <SuperConsole
         tournamentId={t.id}
         nome={t.nome}

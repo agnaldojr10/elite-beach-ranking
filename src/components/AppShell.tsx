@@ -21,6 +21,11 @@ const NAV: NavItem[] = [
     icon: <path d="M4 7h3l7 10h4M4 17h3l2.4-3.4M14 7h4M17 4l3 3-3 3M17 14l3 3-3 3" />,
   },
   {
+    href: "/torneios",
+    label: "Torneios",
+    icon: <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8M20 4v4h-4M20 12a8 8 0 0 1-13.7 5.6L4 16M4 20v-4h4" />,
+  },
+  {
     href: "/cadastros/jogadores",
     label: "Cadastros",
     icon: (

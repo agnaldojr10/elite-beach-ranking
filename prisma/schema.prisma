@@ -50,6 +50,11 @@ enum ResultTier {
   PARTICIPACAO
 }
 
+enum SuperStatus {
+  ABERTO
+  ENCERRADO
+}
+
 // ---------- auth (admin-only) ----------
 model Admin {
   id           String   @id @default(cuid())
@@ -74,6 +79,7 @@ model Player {
   teamsAsP2   Team[]        @relation("TeamP2")
   results     RoundResult[]
   attendances Attendance[]
+  superEntries SuperPlayer[]
 }
 
 // ---------- campeonato / temporada ----------
@@ -179,6 +185,53 @@ model Attendance {
 
   @@id([roundId, playerId])
   @@index([playerId])
+}
+
+// ---------- Torneio Americano (Super 8/12/16) — evento avulso ----------
+// Cada atleta joga de dupla com todos os outros 1× (rodízio "whist").
+// Ranking do dia = soma: Vitórias -> Saldo de games -> Games a favor.
+model SuperTournament {
+  id            String      @id @default(cuid())
+  nome          String
+  data          DateTime    @db.Date
+  size          Int // 8, 12 ou 16
+  courts        Int         @default(2) // quadras disponíveis (exibição/levas)
+  gamesPerMatch Int         @default(7) // total de games por jogo (ímpar -> sem empate)
+  status        SuperStatus @default(ABERTO)
+  createdAt     DateTime    @default(now())
+
+  players SuperPlayer[]
+  matches SuperMatch[]
+}
+
+model SuperPlayer {
+  id           String          @id @default(cuid())
+  tournamentId String
+  tournament   SuperTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       Player          @relation(fields: [playerId], references: [id])
+  seat         Int // assento 0..N-1 — define os confrontos do rodízio
+
+  @@unique([tournamentId, playerId])
+  @@unique([tournamentId, seat])
+  @@index([tournamentId])
+}
+
+model SuperMatch {
+  id           String          @id @default(cuid())
+  tournamentId String
+  tournament   SuperTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  rodada       Int
+  quadra       Int
+  // assentos das duas duplas (2 por lado)
+  a1           Int
+  a2           Int
+  b1           Int
+  b2           Int
+  scoreA       Int?
+  scoreB       Int?
+
+  @@index([tournamentId])
 }
 
 // ---------- resultado congelado ao encerrar ----------

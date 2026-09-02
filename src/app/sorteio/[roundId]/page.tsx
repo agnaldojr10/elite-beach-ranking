@@ -121,6 +121,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
       label: teamLabel.get(s.teamId) ?? "",
       wins: s.wins,
       saldo: s.gamesBalance,
+      gp: s.gamesFor,
     })),
   }));
 

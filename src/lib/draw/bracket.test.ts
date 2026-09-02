@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildSemifinalPairings,
+  globalRank,
   nextStagePairings,
   planKnockout,
 } from "./bracket";
@@ -11,11 +12,29 @@ const g = (
   rows: [string, number, number][],
 ): GroupStandings => ({
   groupName,
+  // played derivado do nº de linhas (grupos iguais nos testes clássicos)
   standings: rows.map(([teamId, wins, gamesBalance]) => ({
     teamId,
     wins,
     gamesBalance,
+    gamesFor: 0,
+    played: rows.length - 1,
   })),
+});
+
+describe("globalRank — médias por jogo (grupos desiguais)", () => {
+  it("classifica por média: 2V em 2 jogos fica acima de 2V em 3 jogos", () => {
+    const s = (teamId: string, wins: number, bal: number, gf: number, played: number) => ({
+      teamId, wins, gamesBalance: bal, gamesFor: gf, played,
+    });
+    const gs: GroupStandings[] = [
+      { groupName: "A", standings: [s("A1", 3, 20, 20, 3), s("A2", 2, 5, 15, 3)] }, // grupo de 4
+      { groupName: "B", standings: [s("B1", 2, 8, 12, 2)] }, // grupo de 3
+    ];
+    const rank = globalRank(gs).map((r) => r.teamId);
+    // médias V: A1=1.0, B1=1.0, A2=0.667 -> A1,B1 empatam; saldo médio A1=6.7 > B1=4.
+    expect(rank).toEqual(["A1", "B1", "A2"]);
+  });
 });
 
 describe("planKnockout — 16 jogadores (2 grupos de 4)", () => {

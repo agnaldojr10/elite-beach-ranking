@@ -25,7 +25,7 @@ type Grupo = {
   label: string;
   duplas: { id: string; label: string }[];
   jogos: Jogo[];
-  classificacao: { label: string; wins: number; saldo: number }[];
+  classificacao: { label: string; wins: number; saldo: number; gp: number }[];
 };
 type KoJogo = Jogo & { phaseLabel: string };
 type Config = { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number };
@@ -479,9 +479,9 @@ export function RoundConsole({
               {g.jogos.map((m) => <MatchRow key={m.matchId} m={m} disabled={encerrada} onSave={saveMatch} />)}
               <ul className="mt-2 flex flex-col gap-0.5">
                 {g.classificacao.map((s, i) => (
-                  <li key={i} className="flex justify-between text-xs text-muted">
-                    <span>{i + 1}. {s.label}</span>
-                    <span className="text-ink">{s.wins}V · saldo {s.saldo}</span>
+                  <li key={i} className="flex justify-between gap-2 text-xs text-muted">
+                    <span className="truncate">{i + 1}. {s.label}</span>
+                    <span className="shrink-0 text-ink">{s.wins}V · SG {s.saldo} · GP {s.gp}</span>
                   </li>
                 ))}
               </ul>

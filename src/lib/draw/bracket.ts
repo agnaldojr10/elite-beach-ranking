@@ -32,14 +32,28 @@ export type KnockoutPlan = {
   avoidSemiRematch?: boolean;
 };
 
-/** Ranqueia TODAS as duplas globalmente por vitórias → saldo de games. */
+/**
+ * Ranqueia TODAS as duplas globalmente por MÉDIAS por jogo — justo entre grupos
+ * de tamanhos diferentes (ex.: grupo de 4 joga 3 partidas; de 3 joga 2).
+ * Critérios: média de vitórias → média de saldo → média de games a favor.
+ */
 export function globalRank(
   groupStandings: readonly GroupStandings[],
 ): { teamId: string; groupName: string }[] {
   return groupStandings
     .flatMap((g) => g.standings.map((s) => ({ s, groupName: g.groupName })))
-    .sort((x, y) => y.s.wins - x.s.wins || y.s.gamesBalance - x.s.gamesBalance)
-    .map(({ s, groupName }) => ({ teamId: s.teamId, groupName }));
+    .map(({ s, groupName }) => {
+      const p = s.played || 1;
+      return {
+        teamId: s.teamId,
+        groupName,
+        avgW: s.wins / p,
+        avgBal: s.gamesBalance / p,
+        avgGf: (s.gamesFor ?? 0) / p,
+      };
+    })
+    .sort((x, y) => y.avgW - x.avgW || y.avgBal - x.avgBal || y.avgGf - x.avgGf)
+    .map((r) => ({ teamId: r.teamId, groupName: r.groupName }));
 }
 
 /**
@@ -93,11 +107,9 @@ export function planKnockout(groupStandings: readonly GroupStandings[]): Knockou
   const D = ranked.length;
 
   // 2 GRUPOS (ex.: 16 jog.): 2 primeiros de cada → semifinal cruzada.
+  // Usa a ordem já classificada do grupo (V → Saldo → GP → confronto direto).
   if (groupStandings.length === 2 && D >= 4) {
-    const at = (g: GroupStandings, pos: number) =>
-      [...g.standings].sort((a, b) => b.wins - a.wins || b.gamesBalance - a.gamesBalance)[
-        pos - 1
-      ]?.teamId;
+    const at = (g: GroupStandings, pos: number) => g.standings[pos - 1]?.teamId;
     const [gA, gB] = groupStandings;
     const a1 = at(gA!, 1)!;
     const a2 = at(gA!, 2)!;

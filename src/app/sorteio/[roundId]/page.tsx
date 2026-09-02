@@ -31,7 +31,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
       status: true,
       peso: true,
       isFinals: true,
-      drawGroupSize: true,
+      drawNumGroups: true,
       drawBalanceByRanking: true,
       drawAvoidRepeat: true,
       drawRandomness: true,
@@ -161,7 +161,7 @@ export default async function RodadaPage({ params }: { params: Promise<{ roundId
         presentes={presentes}
         eligibles={eligibles}
         config={{
-          groupSize: round.drawGroupSize,
+          numGroups: round.drawNumGroups,
           balanceByRanking: round.drawBalanceByRanking,
           avoidRepeat: round.drawAvoidRepeat,
           randomness: round.drawRandomness,

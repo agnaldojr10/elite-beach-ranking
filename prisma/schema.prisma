@@ -122,7 +122,7 @@ model Round {
   isFinals       Boolean      @default(false)
 
   // config do sorteio (por rodada)
-  drawGroupSize        Int     @default(3)
+  drawNumGroups        Int     @default(3) // número de grupos (livre)
   drawBalanceByRanking Boolean @default(true)
   drawAvoidRepeat      Boolean @default(true)
   drawRandomness       Int     @default(60)

@@ -85,17 +85,17 @@ export async function gerarMataMata(roundId: string): Promise<ActionResult> {
 
 export async function saveDrawConfig(
   roundId: string,
-  cfg: { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number },
+  cfg: { numGroups: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number },
 ): Promise<ActionResult> {
   await requireAdmin();
-  const groupSize = Math.round(cfg.groupSize);
+  const numGroups = Math.round(cfg.numGroups);
   const randomness = Math.round(cfg.randomness);
-  if (groupSize < 2 || groupSize > 6) return { ok: false, error: "Tamanho do grupo deve ser 2 a 6 duplas." };
+  if (numGroups < 1 || numGroups > 8) return { ok: false, error: "Número de grupos deve ser de 1 a 8." };
   if (randomness < 0 || randomness > 100) return { ok: false, error: "Aleatoriedade deve ser 0 a 100." };
   await prisma.round.update({
     where: { id: roundId },
     data: {
-      drawGroupSize: groupSize,
+      drawNumGroups: numGroups,
       drawBalanceByRanking: cfg.balanceByRanking,
       drawAvoidRepeat: cfg.avoidRepeat,
       drawRandomness: randomness,

@@ -98,7 +98,7 @@ export async function generateDraw(
     id: String(i),
     strength: (pontos.get(p.player1Id) ?? 0) + (pontos.get(p.player2Id) ?? 0),
   }));
-  const groups = formGroups(seededTeams, round.drawGroupSize);
+  const groups = formGroups(seededTeams, round.drawNumGroups);
   const grupoByIndex = new Map<number, string>();
   for (const g of groups) for (const t of g.teams) grupoByIndex.set(Number(t.id), g.label);
 

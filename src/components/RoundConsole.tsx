@@ -28,7 +28,7 @@ type Grupo = {
   classificacao: { label: string; wins: number; saldo: number; gp: number }[];
 };
 type KoJogo = Jogo & { phaseLabel: string };
-type Config = { groupSize: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number };
+type Config = { numGroups: number; balanceByRanking: boolean; avoidRepeat: boolean; randomness: number };
 type StepKey = "presenca" | "config" | "sortear" | "jogos" | "encerrar";
 
 function MatchRow({
@@ -144,7 +144,7 @@ export function RoundConsole({
   const [search, setSearch] = useState("");
   const [guest, setGuest] = useState("");
   const [cfg, setCfg] = useState<Config>(config);
-  const [groupSizeInput, setGroupSizeInput] = useState(String(config.groupSize));
+  const [numGroupsInput, setNumGroupsInput] = useState(String(config.numGroups));
   const [repeated, setRepeated] = useState<{ player1: string; player2: string; timesBefore: number }[] | null>(null);
   const [swapFor, setSwapFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -191,12 +191,16 @@ export function RoundConsole({
   }
   function salvarConfig() {
     setError(null);
-    const groupSize = parseInt(groupSizeInput, 10);
-    if (!Number.isInteger(groupSize) || groupSize < 2 || groupSize > 6) {
-      setError("Informe um tamanho de grupo entre 2 e 6 duplas.");
+    const numGroups = parseInt(numGroupsInput, 10);
+    if (!Number.isInteger(numGroups) || numGroups < 1 || numGroups > 8) {
+      setError("Informe o número de grupos (de 1 a 8).");
       return;
     }
-    const payload = { ...cfg, groupSize };
+    if (numGroups > present.size / 2) {
+      setError("Há mais grupos do que duplas presentes.");
+      return;
+    }
+    const payload = { ...cfg, numGroups };
     startTransition(async () => {
       const res = await saveDrawConfig(roundId, payload);
       if (res.ok) {
@@ -349,7 +353,7 @@ export function RoundConsole({
       key: "config",
       title: "Configuração do sorteio",
       summary: configConfirmed
-        ? `Grupos de ${config.groupSize} duplas · equilíbrio ${config.balanceByRanking ? "ativado" : "desativado"}`
+        ? `${config.numGroups} grupos · equilíbrio ${config.balanceByRanking ? "ativado" : "desativado"}`
         : presencaOk
           ? `${present.size} presentes (${present.size / 2} duplas)`
           : "Aguardando presença",
@@ -358,18 +362,28 @@ export function RoundConsole({
       body: (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted">
-            {present.size} presentes = {present.size / 2} duplas. Ex.: 8 duplas → grupos de 4 (2 grupos); 9 duplas → grupos de 3 (3 grupos).
+            {present.size} presentes = {present.size / 2} duplas. Informe em quantos grupos dividir.
           </p>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-muted">Tamanho do grupo (nº de duplas)</label>
+            <label className="mb-1 block text-xs font-semibold text-muted">Número de grupos</label>
             <input
               inputMode="numeric"
-              value={groupSizeInput}
-              placeholder="Ex.: 4"
-              onChange={(e) => setGroupSizeInput(e.target.value.replace(/\D/g, "").slice(0, 1))}
+              value={numGroupsInput}
+              placeholder="Ex.: 3"
+              onChange={(e) => setNumGroupsInput(e.target.value.replace(/\D/g, "").slice(0, 1))}
               className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-accent"
             />
-            <p className="mt-1 text-[11px] text-muted">Entre 2 e 6 duplas por grupo.</p>
+            {(() => {
+              const ng = parseInt(numGroupsInput, 10);
+              const duplas = present.size / 2;
+              if (!Number.isInteger(ng) || ng < 1 || ng > duplas) {
+                return <p className="mt-1 text-[11px] text-muted">De 1 até {Math.max(1, duplas)} grupos.</p>;
+              }
+              const base = Math.floor(duplas / ng);
+              const rem = duplas % ng;
+              const sizes = Array.from({ length: ng }, (_, i) => base + (i < rem ? 1 : 0)).sort((a, b) => a - b);
+              return <p className="mt-1 text-[11px] text-muted">Resultará em grupos de: {sizes.join(", ")} duplas.</p>;
+            })()}
           </div>
           <Toggle on={cfg.balanceByRanking} onClick={() => setCfg({ ...cfg, balanceByRanking: !cfg.balanceByRanking })} label="Equilíbrio por ranking" sub="Pareia bem colocado com menos colocado" />
           <Toggle on={cfg.avoidRepeat} onClick={() => setCfg({ ...cfg, avoidRepeat: !cfg.avoidRepeat })} label="Evitar repetição de duplas" sub="Usa o histórico de duplas do campeonato" />

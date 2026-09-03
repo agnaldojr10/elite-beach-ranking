@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   archivePlayer,
   createPlayer,
+  gerarLinkConvite,
   updatePlayer,
 } from "@/app/cadastros/jogadores/actions";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -36,8 +37,29 @@ export function PlayersManager({ players }: { players: Player[] }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("todos");
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [link, setLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function gerarLink(playerId: string) {
+    setError(null);
+    setLink(null);
+    setLinkCopied(false);
+    startTransition(async () => {
+      const res = await gerarLinkConvite(playerId);
+      if (res.ok) {
+        const url = `${window.location.origin}/convite/${res.token}`;
+        setLink(url);
+        try {
+          await navigator.clipboard.writeText(url);
+          setLinkCopied(true);
+        } catch {
+          /* sem clipboard — mostra o link para copiar manual */
+        }
+      } else setError(res.error);
+    });
+  }
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -140,6 +162,8 @@ export function PlayersManager({ players }: { players: Player[] }) {
               <button
                 onClick={() => {
                   setError(null);
+                  setLink(null);
+                  setLinkCopied(false);
                   setDraft({
                     id: p.id,
                     nome: p.nome,
@@ -241,6 +265,38 @@ export function PlayersManager({ players }: { players: Player[] }) {
             >
               {pending ? "Salvando…" : "Salvar"}
             </button>
+            {draft.id && draft.type === "REGULAR" && (
+              <div className="mt-4 rounded-xl border border-line bg-card p-3">
+                <p className="text-xs font-semibold text-ink">Acesso do atleta</p>
+                <p className="mt-0.5 text-[11px] text-muted">
+                  Gere o link e envie no WhatsApp. No 1º acesso o jogador cria a senha.
+                </p>
+                <button
+                  onClick={() => gerarLink(draft.id!)}
+                  disabled={pending}
+                  className="mt-2 w-full rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent disabled:opacity-70"
+                >
+                  {pending ? "Gerando…" : link ? "Gerar novo link" : "Gerar link de acesso"}
+                </button>
+                {link && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <p className="break-all rounded-lg bg-surface px-3 py-2 text-[11px] text-muted">{link}</p>
+                    {linkCopied && <p className="text-[11px] font-semibold text-success">Link copiado!</p>}
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(
+                        `Seu acesso ao Elite Beach Ranking: ${link}\n\nAbra o link, confirme que é você e crie sua senha. O link vale 7 dias.`,
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-xl bg-success/15 py-2.5 text-center text-sm font-semibold text-success"
+                    >
+                      Enviar no WhatsApp
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
             {draft.id && (
               <button
                 onClick={archive}

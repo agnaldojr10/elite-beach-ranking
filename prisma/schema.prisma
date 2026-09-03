@@ -75,11 +75,44 @@ model Player {
   active    Boolean    @default(true) // soft delete
   createdAt DateTime   @default(now())
 
-  teamsAsP1   Team[]        @relation("TeamP1")
-  teamsAsP2   Team[]        @relation("TeamP2")
-  results     RoundResult[]
-  attendances Attendance[]
+  // acesso do atleta (v2): login por convite + senha própria
+  loginContact String? @unique // e-mail ou telefone normalizado para login
+  passwordHash String?
+  clube        String? // exibido no card do atleta
+
+  teamsAsP1    Team[]             @relation("TeamP1")
+  teamsAsP2    Team[]             @relation("TeamP2")
+  results      RoundResult[]
+  attendances  Attendance[]
   superEntries SuperPlayer[]
+  invites      PlayerInvite[]
+  pushSubs     PushSubscription[]
+}
+
+// convite de acesso gerado pela organização (uso único, expira em 7 dias)
+model PlayerInvite {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  playerId  String
+  player    Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([playerId])
+}
+
+// inscrição de push (PWA) por dispositivo do atleta
+model PushSubscription {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([playerId])
 }
 
 // ---------- campeonato / temporada ----------

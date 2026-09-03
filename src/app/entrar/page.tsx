@@ -1,13 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { authenticate } from "./actions";
+import { entrarAtleta } from "./actions";
 
-export default function LoginPage() {
-  const [errorMessage, formAction, isPending] = useActionState(
-    authenticate,
-    undefined,
-  );
+export default function EntrarPage() {
+  const [errorMessage, formAction, isPending] = useActionState(entrarAtleta, undefined);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[#081A1E] px-6 text-[#F3EEE2]">
@@ -16,18 +13,18 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="Elite Beach Ranking" className="mb-3 h-20 w-20" />
           <h1 className="text-2xl font-bold">Elite Beach Ranking</h1>
-          <p className="mt-1 text-sm text-[#8FA9AE]">Painel administrativo</p>
+          <p className="mt-1 text-sm text-[#8FA9AE]">Área do jogador</p>
         </div>
 
         <form action={formAction} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-[#8FA9AE]">E-mail</span>
+            <span className="text-xs font-semibold text-[#8FA9AE]">E-mail ou telefone</span>
             <input
               name="email"
-              type="email"
+              type="text"
               required
-              autoComplete="email"
-              placeholder="seu@email.com"
+              autoComplete="username"
+              placeholder="seu@email.com ou (17) 99999-9999"
               className="rounded-xl border border-white/10 bg-[#0F2A30] px-3.5 py-3 text-sm outline-none focus:border-[#FF7A1A]"
             />
           </label>
@@ -59,13 +56,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-[#5f7d82]">
-          Acesso restrito a administradores
-        </p>
-        <p className="mt-2 text-center text-xs">
-          <a href="/entrar" className="font-semibold text-[#FF7A1A]">
-            Sou jogador — entrar na minha área
-          </a>
+        <p className="mt-6 text-center text-xs leading-relaxed text-[#5f7d82]">
+          Recebi um convite: abra o link enviado pela organização.
+          <br />
+          Sem senha? Peça um novo link — a recuperação é feita por lá.
         </p>
       </div>
     </main>

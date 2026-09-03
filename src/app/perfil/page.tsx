@@ -2,13 +2,10 @@ import { signOut } from "@/auth";
 import { requirePlayer } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { PlayerShell } from "@/components/player/PlayerShell";
+import { PerfilClient } from "@/components/player/PerfilClient";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
-
-const initials = (nome: string) => {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase();
-};
 
 export default async function PerfilPage() {
   const { playerId } = await requirePlayer();
@@ -21,26 +18,34 @@ export default async function PerfilPage() {
     <PlayerShell>
       <h1 className="mb-4 pt-3 text-[20px] font-extrabold text-ink">Perfil</h1>
 
-      <div className="flex flex-col items-center rounded-[26px] border border-line bg-card p-6 text-center">
-        {player?.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.photoUrl} alt={player.nome} className="h-20 w-20 rounded-full object-cover" />
-        ) : (
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-ocean/15 text-xl font-bold text-ocean">
-            {initials(player?.nome ?? "")}
-          </span>
-        )}
-        <p className="mt-3 text-[18px] font-extrabold text-ink">{player?.nome}</p>
-        {player?.clube && <p className="text-[12px] text-muted">{player.clube}</p>}
-        {player?.loginContact && <p className="mt-1 text-[11.5px] text-muted">{player.loginContact}</p>}
+      <PerfilClient nome={player?.nome ?? ""} clube={player?.clube ?? null} foto={player?.photoUrl ?? null} />
+
+      <div className="mt-4 flex items-center justify-between rounded-[20px] border border-line bg-card px-4 py-3.5">
+        <div>
+          <p className="text-[13.5px] font-semibold text-ink">Tema</p>
+          <p className="text-[11px] text-muted">Claro ou escuro</p>
+        </div>
+        <ThemeToggle />
       </div>
+
+      <div className="mt-3 flex items-center justify-between rounded-[20px] border border-line bg-card px-4 py-3.5">
+        <div>
+          <p className="text-[13.5px] font-semibold text-ink">Notificações</p>
+          <p className="text-[11px] text-muted">Avisos de sorteio e dos seus jogos</p>
+        </div>
+        <span className="rounded-full bg-white/7 px-2.5 py-1 text-[10px] font-bold text-muted">em breve</span>
+      </div>
+
+      {player?.loginContact && (
+        <p className="mt-4 text-center text-[11px] text-muted">Login: {player.loginContact}</p>
+      )}
 
       <form
         action={async () => {
           "use server";
           await signOut({ redirectTo: "/entrar" });
         }}
-        className="mt-5"
+        className="mt-4"
       >
         <button className="w-full rounded-full border border-danger/35 bg-danger/[.08] py-3 text-[13.5px] font-extrabold text-danger">
           Sair

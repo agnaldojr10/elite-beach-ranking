@@ -154,6 +154,85 @@ export function LiveMatchCard({
   );
 }
 
+/** Card de confronto (read-only) — sem input de placar em nenhum estado. */
+export function MatchCard({
+  adversarios,
+  scoreA,
+  scoreB,
+  estado,
+  meta,
+}: {
+  adversarios: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  estado: "vitoria" | "derrota" | "em_quadra" | "agendado";
+  meta?: string;
+}) {
+  const badge = {
+    vitoria: ["VITÓRIA", "bg-success/15 text-success"],
+    derrota: ["DERROTA", "bg-danger/15 text-danger"],
+    em_quadra: ["EM QUADRA", "bg-accent/15 text-accent"],
+    agendado: ["AGENDADO", "bg-white/7 text-muted"],
+  }[estado];
+  const scoreColor = estado === "vitoria" ? "text-success" : estado === "derrota" ? "text-danger" : "text-ink";
+
+  return (
+    <div className={`rounded-[20px] px-3.5 py-3 ${estado === "em_quadra" ? "border border-accent bg-accent/10" : "border border-line bg-card"}`}>
+      <div className="flex items-center gap-2.5">
+        {estado === "em_quadra" && <LiveDot />}
+        <span className={`rounded-full px-2 py-0.5 text-[9.5px] font-extrabold ${badge[1]}`}>{badge[0]}</span>
+        <span className="flex-1" />
+        {meta && <span className="text-[10px] text-muted">{meta}</span>}
+      </div>
+      <div className="mt-2.5 flex items-center gap-3">
+        <p className="flex-1 text-[12.5px] font-semibold text-muted">
+          vs <span className="text-ink">{adversarios}</span>
+        </p>
+        <p className={`font-mono text-[18px] font-black ${scoreColor}`}>
+          {scoreA != null && scoreB != null ? `${scoreA}×${scoreB}` : "—"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Mini-tabela do grupo (V · SG · GP), com a dupla do atleta destacada. */
+export function GroupStandingsCard({
+  grupo,
+  rows,
+}: {
+  grupo: string;
+  rows: { label: string; wins: number; saldo: number; gp: number; isMe: boolean }[];
+}) {
+  return (
+    <div className="rounded-[24px] border border-line bg-card p-4">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[13px] font-extrabold text-ink">Grupo {grupo}</p>
+        <span className="text-[10px] font-semibold text-muted">V · SG · GP</span>
+      </div>
+      <div className="mt-3 flex flex-col gap-1.5">
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-2.5 rounded-2xl px-3 py-2.5 ${
+              r.isMe ? "border-[1.5px] border-accent bg-accent/10" : "bg-white/[.04]"
+            }`}
+          >
+            <span className={`w-3.5 text-[11px] font-extrabold ${r.isMe ? "text-accent" : "text-muted"}`}>{i + 1}</span>
+            <span className={`min-w-0 flex-1 truncate text-[11.5px] ${r.isMe ? "font-extrabold" : "font-semibold"} text-ink`}>
+              {r.label}
+            </span>
+            <span className="font-mono text-[11px] font-bold text-ink">
+              {r.wins} · {r.saldo >= 0 ? `+${r.saldo}` : r.saldo} · {r.gp}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[10px] leading-relaxed text-muted">Critérios: vitórias, saldo de games e games pró.</p>
+    </div>
+  );
+}
+
 export function PillButton({
   href,
   variant = "primary",

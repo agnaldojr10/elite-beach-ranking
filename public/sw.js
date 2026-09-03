@@ -1,7 +1,7 @@
 // Service worker do Elite Beach Ranking.
 // Network-first com cache para estáticos; navegações seguem redirecionamentos
-// (evita o erro "opaqueredirect") e têm fallback offline.
-const CACHE = "ebr-v2";
+// (evita o erro "opaqueredirect") e têm fallback offline. Push da área do atleta.
+const CACHE = "ebr-v3";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -55,5 +55,39 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(req)),
+  );
+});
+
+// ---------- Push (área do atleta) ----------
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: "Elite Beach Ranking", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Elite Beach Ranking";
+  const options = {
+    body: data.body || "",
+    icon: "/logo.svg",
+    badge: "/logo.svg",
+    data: { url: data.url || "/inicio" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/inicio";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ("focus" in c) {
+          c.navigate(url);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
   );
 });

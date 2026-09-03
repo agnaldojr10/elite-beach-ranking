@@ -3,6 +3,7 @@ import { requirePlayer } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { PlayerShell } from "@/components/player/PlayerShell";
 import { PerfilClient } from "@/components/player/PerfilClient";
+import { NotifToggle } from "@/components/player/NotifToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function PerfilPage() {
           <p className="text-[13.5px] font-semibold text-ink">Notificações</p>
           <p className="text-[11px] text-muted">Avisos de sorteio e dos seus jogos</p>
         </div>
-        <span className="rounded-full bg-white/7 px-2.5 py-1 text-[10px] font-bold text-muted">em breve</span>
+        <NotifToggle />
       </div>
 
       {player?.loginContact && (

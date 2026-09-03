@@ -4,8 +4,24 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requirePlayer } from "@/lib/auth-guard";
+import { savePushSubscription, removePushSubscription } from "@/server/push.service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+export async function inscreverPush(sub: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}): Promise<ActionResult> {
+  const { playerId } = await requirePlayer();
+  await savePushSubscription(playerId, sub);
+  return { ok: true };
+}
+
+export async function cancelarPush(endpoint: string): Promise<ActionResult> {
+  await requirePlayer();
+  await removePushSubscription(endpoint);
+  return { ok: true };
+}
 
 export async function atualizarFotoAtleta(url: string | null): Promise<ActionResult> {
   const { playerId } = await requirePlayer();

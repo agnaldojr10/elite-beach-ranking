@@ -3,6 +3,7 @@ import { requirePlayer } from "@/lib/auth-guard";
 import { getPlayerRound } from "@/server/player.service";
 import { PlayerShell, PlayerIcon } from "@/components/player/PlayerShell";
 import { MatchCard, GroupStandingsCard, StatusChip, Avatar } from "@/components/player/ui";
+import { LiveRefresher } from "@/components/player/LiveRefresher";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function RodadaPage() {
 
   return (
     <PlayerShell>
+      {r.round.status === "SORTEADA" && <LiveRefresher seconds={25} />}
       <div className="pt-3">
         <header className="mb-3 flex items-center gap-3">
           <Link href="/inicio" className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[14px] border border-line bg-card text-ink">

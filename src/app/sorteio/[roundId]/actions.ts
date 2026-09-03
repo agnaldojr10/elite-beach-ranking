@@ -7,6 +7,7 @@ import { generateDraw } from "@/server/draw.service";
 import { syncKnockout } from "@/server/knockout.service";
 import { buildRoundExport, encerrarRodada } from "@/server/round-close.service";
 import { isValidBeachScore } from "@/lib/score";
+import { notifyPlayers, playersDaRodada } from "@/server/push.service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ExportResult = { ok: true; text: string } | { ok: false; error: string };
@@ -138,6 +139,16 @@ export async function confirmarDuplas(roundId: string): Promise<ActionResult> {
   if (teams === 0) return { ok: false, error: "Sorteie as duplas antes de confirmar." };
   await prisma.round.update({ where: { id: roundId }, data: { duplasConfirmed: true } });
   revalidatePath(`/sorteio/${roundId}`);
+  try {
+    const ids = await playersDaRodada(roundId);
+    await notifyPlayers(ids, {
+      title: "Duplas sorteadas! 🎾",
+      body: "Veja sua dupla, grupo e seus jogos da rodada.",
+      url: "/inicio",
+    });
+  } catch {
+    /* push é best-effort */
+  }
   return { ok: true };
 }
 
@@ -175,6 +186,16 @@ export async function encerrar(roundId: string): Promise<ActionResult> {
     await encerrarRodada(roundId);
     revalidatePath(`/sorteio/${roundId}`);
     revalidatePath("/ranking");
+    try {
+      const ids = await playersDaRodada(roundId);
+      await notifyPlayers(ids, {
+        title: "Resultado da rodada 🏆",
+        body: "O ranking foi atualizado. Veja como você ficou.",
+        url: "/classificacao",
+      });
+    } catch {
+      /* push é best-effort */
+    }
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao encerrar a rodada." };

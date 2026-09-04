@@ -4,6 +4,7 @@ export type RankingRow = {
   posicao: number;
   playerId: string;
   nome: string;
+  photoUrl: string | null;
   pontos: number;
   variacao: "up" | "down" | "same";
 };
@@ -51,7 +52,7 @@ export async function getRankingGeral(championshipId: string): Promise<RankingGe
         playerId: true,
         pointsAwarded: true,
         round: { select: { numero: true } },
-        player: { select: { nome: true, type: true, active: true } },
+        player: { select: { nome: true, type: true, active: true, photoUrl: true } },
       },
     }),
     prisma.team.findMany({
@@ -66,6 +67,7 @@ export async function getRankingGeral(championshipId: string): Promise<RankingGe
 
   const regulars = results.filter((r) => r.player.type === "REGULAR" && r.player.active);
   const nomeById = new Map(regulars.map((r) => [r.playerId, r.player.nome]));
+  const fotoById = new Map(regulars.map((r) => [r.playerId, r.player.photoUrl]));
 
   const totals = new Map<string, number>();
   for (const r of regulars) totals.set(r.playerId, (totals.get(r.playerId) ?? 0) + r.pointsAwarded);
@@ -121,7 +123,14 @@ export async function getRankingGeral(championshipId: string): Promise<RankingGe
       const prev = prevPos.get(playerId);
       let variacao: RankingRow["variacao"] = "same";
       if (prev != null) variacao = cur < prev ? "up" : cur > prev ? "down" : "same";
-      return { posicao: cur, playerId, nome: nomeById.get(playerId) ?? "", pontos, variacao };
+      return {
+        posicao: cur,
+        playerId,
+        nome: nomeById.get(playerId) ?? "",
+        photoUrl: fotoById.get(playerId) ?? null,
+        pontos,
+        variacao,
+      };
     })
     .sort((a, b) => a.posicao - b.posicao);
 

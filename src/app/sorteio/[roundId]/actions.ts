@@ -28,8 +28,9 @@ export async function toggleAttendance(roundId: string, playerId: string): Promi
 export async function quickAddGuest(roundId: string, nome: string): Promise<ActionResult> {
   await requireAdmin();
   const n = nome.trim();
-  if (n.length < 2) return { ok: false, error: "Informe o nome do convidado." };
-  const player = await prisma.player.create({ data: { nome: n, type: "GUEST" } });
+  if (n.length < 2) return { ok: false, error: "Informe o nome do jogador." };
+  // cadastro rápido cria um JOGADOR (REGULAR) por padrão
+  const player = await prisma.player.create({ data: { nome: n, type: "REGULAR" } });
   await prisma.attendance.create({ data: { roundId, playerId: player.id } });
   revalidatePath(`/sorteio/${roundId}`);
   return { ok: true };

@@ -194,7 +194,7 @@ export type PlayerRankingData = {
   championship: { nome: string; temporada: string } | null;
   totalRodadas: number;
   rodadasEncerradas: number;
-  rows: (RankingRow & { photoUrl: string | null })[];
+  rows: RankingRow[];
   pneu: PneuInfo;
   rodadas: { id: string; numero: number; results: { pos: number; nome: string; tierLabel: string; pts: number; isMe: boolean }[] }[];
 };
@@ -205,9 +205,8 @@ export async function getPlayerRankingData(playerId: string): Promise<PlayerRank
     return { championship: null, totalRodadas: 0, rodadasEncerradas: 0, rows: [], pneu: null, rodadas: [] };
   }
 
-  const [{ rows, pneu }, fotos, totalRodadas, rodadasEncerradas, rr] = await Promise.all([
+  const [{ rows, pneu }, totalRodadas, rodadasEncerradas, rr] = await Promise.all([
     getRankingGeral(champ.id),
-    prisma.player.findMany({ select: { id: true, photoUrl: true } }),
     prisma.round.count({ where: { championshipId: champ.id, isFinals: false } }),
     prisma.round.count({ where: { championshipId: champ.id, isFinals: false, status: "ENCERRADA" } }),
     prisma.roundResult.findMany({
@@ -221,9 +220,6 @@ export async function getPlayerRankingData(playerId: string): Promise<PlayerRank
       },
     }),
   ]);
-
-  const fotoById = new Map(fotos.map((f) => [f.id, f.photoUrl]));
-  const rowsWithPhoto = rows.map((r) => ({ ...r, photoUrl: fotoById.get(r.playerId) ?? null }));
 
   const byRound = new Map<string, { id: string; numero: number | null; results: { nome: string; tier: string; pts: number; isMe: boolean }[] }>();
   for (const r of rr) {
@@ -245,7 +241,7 @@ export async function getPlayerRankingData(playerId: string): Promise<PlayerRank
     championship: { nome: champ.nome, temporada: champ.temporada },
     totalRodadas,
     rodadasEncerradas,
-    rows: rowsWithPhoto,
+    rows,
     pneu,
     rodadas,
   };

@@ -17,6 +17,7 @@ type Player = {
   email: string | null;
   photoUrl: string | null;
   type: "REGULAR" | "GUEST";
+  vinculado: boolean;
 };
 type Filter = "todos" | "REGULAR" | "GUEST";
 type Draft = {
@@ -25,6 +26,7 @@ type Draft = {
   email: string;
   photoUrl: string | null;
   type: "REGULAR" | "GUEST";
+  vinculado?: boolean;
 };
 
 function initials(nome: string) {
@@ -170,6 +172,7 @@ export function PlayersManager({ players }: { players: Player[] }) {
                     email: p.email ?? "",
                     photoUrl: p.photoUrl,
                     type: p.type,
+                    vinculado: p.vinculado,
                   });
                 }}
                 className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left"
@@ -267,16 +270,31 @@ export function PlayersManager({ players }: { players: Player[] }) {
             </button>
             {draft.id && draft.type === "REGULAR" && (
               <div className="mt-4 rounded-xl border border-line bg-card p-3">
-                <p className="text-xs font-semibold text-ink">Acesso do atleta</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-ink">Acesso do atleta</p>
+                  {draft.vinculado && (
+                    <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-[10px] font-bold text-success">
+                      Jogador vinculado
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 text-[11px] text-muted">
-                  Gere o link e envie no WhatsApp. No 1º acesso o jogador cria a senha.
+                  {draft.vinculado
+                    ? "Se ele esqueceu a senha, gere um link de redefinição e reenvie."
+                    : "Gere o link e envie no WhatsApp. No 1º acesso o jogador cria a senha."}
                 </p>
                 <button
                   onClick={() => gerarLink(draft.id!)}
                   disabled={pending}
                   className="mt-2 w-full rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent disabled:opacity-70"
                 >
-                  {pending ? "Gerando…" : link ? "Gerar novo link" : "Gerar link de acesso"}
+                  {pending
+                    ? "Gerando…"
+                    : draft.vinculado
+                      ? "Resetar senha (reenviar link)"
+                      : link
+                        ? "Gerar novo link"
+                        : "Gerar link de acesso"}
                 </button>
                 {link && (
                   <div className="mt-2 flex flex-col gap-2">
@@ -284,7 +302,9 @@ export function PlayersManager({ players }: { players: Player[] }) {
                     {linkCopied && <p className="text-[11px] font-semibold text-success">Link copiado!</p>}
                     <a
                       href={`https://wa.me/?text=${encodeURIComponent(
-                        `Seu acesso ao Ranking Elite Beach: ${link}\n\nAbra o link, confirme que é você e crie sua senha. O link vale 7 dias.`,
+                        draft.vinculado
+                          ? `Redefinição de senha do Ranking Elite Beach: ${link}\n\nAbra o link e crie uma nova senha de acesso. O link vale 7 dias.`
+                          : `Seu acesso ao Ranking Elite Beach: ${link}\n\nAbra o link, confirme que é você e crie sua senha. O link vale 7 dias.`,
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"

@@ -230,10 +230,14 @@ export function RoundConsole({
     });
   }
   function shareDuplas() {
-    const txt = grupos
-      .map((g) => `Grupo ${g.label}:\n${g.duplas.map((d) => `• ${d.label}`).join("\n")}`)
-      .join("\n\n");
-    void shareText(`🎾 Duplas sorteadas\n\n${txt}`);
+    const partes = grupos.map((g) => {
+      const duplas = g.duplas.map((d) => `• ${d.label}`).join("\n");
+      const jogos = g.jogos.length
+        ? "\n\nJogos:\n" + g.jogos.map((m) => `• ${m.labelA}  x  ${m.labelB}`).join("\n")
+        : "";
+      return `📋 GRUPO ${g.label}\nDuplas:\n${duplas}${jogos}`;
+    });
+    void shareText(`🎾 Sorteio da rodada\n\n${partes.join("\n\n")}`);
   }
   function doConfirmarDuplas() {
     startTransition(async () => {
@@ -336,7 +340,7 @@ export function RoundConsole({
             })}
           </ul>
           <div className="flex gap-2">
-            <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Cadastro rápido de convidado" className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-accent" />
+            <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Cadastro rápido de jogador" className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-accent" />
             <button onClick={addGuest} disabled={pending} className="rounded-xl border border-line bg-surface px-4 text-xl text-ink disabled:opacity-70">+</button>
           </div>
           <button

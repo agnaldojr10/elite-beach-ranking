@@ -8,6 +8,7 @@ type Row = {
   posicao: number;
   playerId: string;
   nome: string;
+  photoUrl: string | null;
   pontos: number;
   variacao: "up" | "down" | "same";
 };
@@ -43,9 +44,14 @@ function Podium({ rows }: { rows: Row[] }) {
       {order.map((r, i) => (
         <div key={r.playerId} className="flex w-24 flex-col items-center gap-1">
           <div
-            className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold ${medal[i]}`}
+            className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-full text-sm font-bold ${medal[i]}`}
           >
-            {initials(r.nome)}
+            {r.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={r.photoUrl} alt={r.nome} className="h-full w-full object-cover" />
+            ) : (
+              initials(r.nome)
+            )}
           </div>
           <p className="text-center text-xs font-semibold leading-tight text-ink">{r.nome}</p>
           <p className="text-[11px] text-muted">{r.pontos} pts</p>
@@ -166,9 +172,14 @@ export function RankingView({
                     className="flex items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3"
                   >
                     <span className="w-6 text-center text-sm font-bold text-muted">{r.posicao}</span>
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ocean/15 text-xs font-bold text-ocean">
-                      {initials(r.nome)}
-                    </span>
+                    {r.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.photoUrl} alt={r.nome} className="h-9 w-9 rounded-full object-cover" />
+                    ) : (
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ocean/15 text-xs font-bold text-ocean">
+                        {initials(r.nome)}
+                      </span>
+                    )}
                     <span className="flex-1 truncate text-sm font-semibold text-ink">{r.nome}</span>
                     <span className={`text-xs font-bold ${VAR[r.variacao].cls}`}>
                       {VAR[r.variacao].icon}

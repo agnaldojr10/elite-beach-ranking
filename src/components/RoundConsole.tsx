@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { shareText } from "@/lib/share";
 import { isValidBeachScore, parseScorePair } from "@/lib/score";
+import { RoundPodiumShare } from "@/components/poster/RoundPodiumShare";
 import {
   confirmarDuplas,
   encerrar,
@@ -556,6 +557,7 @@ export function RoundConsole({
           <button onClick={doExport} disabled={pending} className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink disabled:opacity-70">
             {pending ? "Gerando…" : "Compartilhar resultado + ranking"}
           </button>
+          <RoundPodiumShare roundId={roundId} />
           <button onClick={doReabrir} disabled={pending} className="w-full rounded-xl bg-warning/15 py-3 text-sm font-bold text-warning disabled:opacity-70">
             Reabrir rodada (corrigir placar)
           </button>

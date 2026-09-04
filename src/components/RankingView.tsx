@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { shareText } from "@/lib/share";
+import { RankingPoster } from "@/components/poster/RankingPoster";
 
 type Row = {
   posicao: number;
@@ -80,6 +81,7 @@ export function RankingView({
   const [tab, setTab] = useState<"geral" | "rodada">("geral");
   const [rodadaId, setRodadaId] = useState<string>(rodadas.at(-1)?.id ?? "");
   const [pneuOpen, setPneuOpen] = useState(false);
+  const [poster, setPoster] = useState(false);
 
   const rodada = rodadas.find((r) => r.id === rodadaId) ?? null;
 
@@ -121,12 +123,22 @@ export function RankingView({
           <>
             <Podium rows={rows} />
 
-            <button
-              onClick={shareGeral}
-              className="rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent"
-            >
-              Compartilhar no WhatsApp
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={shareGeral}
+                className="flex-1 rounded-xl bg-accent/15 py-2.5 text-sm font-semibold text-accent"
+              >
+                Compartilhar (texto)
+              </button>
+              <button
+                onClick={() => setPoster((v) => !v)}
+                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold ${poster ? "bg-accent text-accent-ink" : "bg-accent/15 text-accent"}`}
+              >
+                {poster ? "Ocultar imagem" : "Imagem do ranking"}
+              </button>
+            </div>
+
+            {poster && <RankingPoster titulo={titulo} rows={rows} />}
 
             {pneu && (
               <div className="overflow-hidden rounded-2xl border border-line bg-warning/10">

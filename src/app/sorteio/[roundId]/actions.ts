@@ -11,6 +11,8 @@ import { notifyPlayers, playersDaRodada } from "@/server/push.service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ExportResult = { ok: true; text: string } | { ok: false; error: string };
+export type PodioItem = { tierLabel: string; pts: number; nomes: string[]; photos: (string | null)[] };
+export type PodioResult = { ok: true; numero: number | null; itens: PodioItem[] } | { ok: false; error: string };
 export type SortearResult =
   | { ok: true; repeated: { player1: string; player2: string; timesBefore: number }[] }
   | { ok: false; error: string };
@@ -238,6 +240,30 @@ export async function refazerMataMata(roundId: string): Promise<ActionResult> {
   await prisma.match.deleteMany({ where: { roundId, phase: { not: "GRUPOS" } } });
   revalidatePath(`/sorteio/${roundId}`);
   return { ok: true };
+}
+
+export async function podioRodada(roundId: string): Promise<PodioResult> {
+  await requireAdmin();
+  const round = await prisma.round.findUnique({ where: { id: roundId }, select: { numero: true } });
+  if (!round) return { ok: false, error: "Rodada não encontrada." };
+
+  const rr = await prisma.roundResult.findMany({
+    where: { roundId, tier: { in: ["CAMPEAO", "VICE", "TERCEIRO", "QUARTO"] } },
+    select: { tier: true, pointsAwarded: true, player: { select: { nome: true, photoUrl: true } } },
+  });
+
+  const LABEL: Record<string, string> = { CAMPEAO: "Campeão", VICE: "Vice", TERCEIRO: "3º lugar", QUARTO: "4º lugar" };
+  const ORDER = ["CAMPEAO", "VICE", "TERCEIRO", "QUARTO"];
+  const byTier = new Map<string, { pts: number; players: { nome: string; photoUrl: string | null }[] }>();
+  for (const r of rr) {
+    if (!byTier.has(r.tier)) byTier.set(r.tier, { pts: r.pointsAwarded, players: [] });
+    byTier.get(r.tier)!.players.push(r.player);
+  }
+  const itens: PodioItem[] = ORDER.filter((t) => byTier.has(t)).map((t) => {
+    const g = byTier.get(t)!;
+    return { tierLabel: LABEL[t], pts: g.pts, nomes: g.players.map((p) => p.nome), photos: g.players.map((p) => p.photoUrl) };
+  });
+  return { ok: true, numero: round.numero, itens };
 }
 
 export async function exportRodada(roundId: string): Promise<ExportResult> {

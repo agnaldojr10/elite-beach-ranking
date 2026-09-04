@@ -44,7 +44,7 @@ export default async function PerfilPage() {
       <form
         action={async () => {
           "use server";
-          await signOut({ redirectTo: "/entrar" });
+          await signOut({ redirectTo: "/login" });
         }}
         className="mt-4"
       >

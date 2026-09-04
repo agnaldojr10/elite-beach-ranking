@@ -16,7 +16,7 @@ function LinkInvalido() {
       <p className="mt-2 max-w-[300px] text-[13px] leading-relaxed text-muted">
         Links de convite valem por 7 dias. Peça um novo link à organização no WhatsApp — leva um minuto.
       </p>
-      <Link href="/entrar" className="mt-6 text-[12.5px] font-semibold text-muted underline">
+      <Link href="/login" className="mt-6 text-[12.5px] font-semibold text-muted underline">
         Já tenho senha — entrar
       </Link>
     </div>

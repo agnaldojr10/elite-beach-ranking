@@ -49,7 +49,6 @@ export const authConfig = {
 
       const isAuthPage =
         pathname.startsWith("/login") ||
-        pathname.startsWith("/entrar") ||
         pathname.startsWith("/convite");
 
       if (isAuthPage) {

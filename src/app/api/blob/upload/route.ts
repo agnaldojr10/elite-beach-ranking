@@ -1,34 +1,42 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-// Upload de imagens (foto de jogador, banner/logo de campeonato) via Vercel Blob.
-// O cliente sobe direto para o Blob usando um token gerado aqui (só para admin).
+export const runtime = "nodejs";
+
+const MAX = 4 * 1024 * 1024; // 4 MB (limite do serverless)
+
+// Upload de imagens pelo servidor (evita CORS do upload direto do cliente).
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json({ error: "Armazenamento (Blob) não configurado." }, { status: 500 });
+  }
+
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Envio inválido." }, { status: 400 });
+  }
+
+  const file = form.get("file");
+  if (!(file instanceof File)) return NextResponse.json({ error: "Arquivo ausente." }, { status: 400 });
+  if (!file.type.startsWith("image/")) return NextResponse.json({ error: "Envie uma imagem." }, { status: 400 });
+  if (file.size > MAX) return NextResponse.json({ error: "Imagem acima de 4 MB." }, { status: 413 });
 
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async () => {
-        const session = await auth();
-        if (!session?.user) throw new Error("Não autorizado.");
-        return {
-          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-          maximumSizeInBytes: 5 * 1024 * 1024, // 5 MB
-          addRandomSuffix: true,
-        };
-      },
-      onUploadCompleted: async () => {
-        // nada a fazer — a URL é salva pelo formulário que chamou o upload
-      },
+    const safe = (file.name || "imagem").replace(/[^\w.\-]+/g, "_");
+    const blob = await put(`uploads/${safe}`, file, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType: file.type,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
-    return NextResponse.json(jsonResponse);
-  } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Falha no upload." },
-      { status: 400 },
-    );
+    return NextResponse.json({ url: blob.url });
+  } catch {
+    return NextResponse.json({ error: "Falha ao enviar a imagem." }, { status: 500 });
   }
 }

@@ -26,9 +26,9 @@ export function ConviteClient({ token, player }: { token: string; player: Player
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="" className="h-9 w-9" />
           <div className="text-[12.5px] font-extrabold leading-none text-ink">
-            ELITE BEACH
+            RANKING
             <br />
-            <span className="text-accent">RANKING</span>
+            <span className="text-accent">ELITE BEACH</span>
           </div>
         </div>
 

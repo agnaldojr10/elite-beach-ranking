@@ -150,7 +150,7 @@ function draw(canvas: HTMLCanvasElement, titulo: string, size: number, rows: Row
   ctx.textAlign = "center";
   ctx.fillStyle = "#5f7d82";
   ctx.font = `800 24px ${FONT}`;
-  ctx.fillText("ELITE BEACH RANKING", 540, 1040);
+  ctx.fillText("RANKING ELITE BEACH", 540, 1040);
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

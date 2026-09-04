@@ -60,7 +60,7 @@ function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | n
   ctx.textAlign = "left";
   ctx.fillStyle = "#ff9a4d";
   ctx.font = `800 26px ${FONT}`;
-  ctx.fillText("ELITE BEACH RANKING", PAD, 130);
+  ctx.fillText("RANKING ELITE BEACH", PAD, 130);
   ctx.fillStyle = "#8fa9ae";
   ctx.font = `700 22px ${FONT}`;
   ctx.fillText("TEMPORADA 2026", PAD, 165);
@@ -144,7 +144,7 @@ function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | n
   ctx.fillText(`🏆 ${d.titulos} título(s)   ·   🥇 ${d.podios} pódio(s)`, W / 2, 1120);
   ctx.fillStyle = "#5f7d82";
   ctx.font = `800 22px ${FONT}`;
-  ctx.fillText("ELITE BEACH RANKING · PWA", W / 2, 1250);
+  ctx.fillText("RANKING ELITE BEACH", W / 2, 1250);
 }
 
 export function PlayerCardCanvas({ data }: { data: CardData }) {

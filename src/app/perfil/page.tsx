@@ -52,7 +52,7 @@ export default async function PerfilPage() {
           Sair
         </button>
       </form>
-      <p className="mt-5 text-center text-[11px] text-muted">Elite Beach Ranking · PWA</p>
+      <p className="mt-5 text-center text-[11px] text-muted">Ranking Elite Beach</p>
     </PlayerShell>
   );
 }

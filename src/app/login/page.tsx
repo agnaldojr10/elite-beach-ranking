@@ -14,8 +14,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Elite Beach Ranking" className="mb-3 h-20 w-20" />
-          <h1 className="text-2xl font-bold">Elite Beach Ranking</h1>
+          <img src="/logo.svg" alt="Ranking Elite Beach" className="mb-3 h-20 w-20" />
+          <h1 className="text-2xl font-bold">Ranking Elite Beach</h1>
           <p className="mt-1 text-sm font-semibold text-[#FF7A1A]">Bora pro Play!</p>
         </div>
 

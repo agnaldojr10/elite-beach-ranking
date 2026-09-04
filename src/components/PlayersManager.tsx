@@ -284,7 +284,7 @@ export function PlayersManager({ players }: { players: Player[] }) {
                     {linkCopied && <p className="text-[11px] font-semibold text-success">Link copiado!</p>}
                     <a
                       href={`https://wa.me/?text=${encodeURIComponent(
-                        `Seu acesso ao Elite Beach Ranking: ${link}\n\nAbra o link, confirme que é você e crie sua senha. O link vale 7 dias.`,
+                        `Seu acesso ao Ranking Elite Beach: ${link}\n\nAbra o link, confirme que é você e crie sua senha. O link vale 7 dias.`,
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"

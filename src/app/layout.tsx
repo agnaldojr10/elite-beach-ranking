@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Elite Beach Ranking",
+  title: "Ranking Elite Beach",
   description: "Ranking de Beach Tennis da Elite Beach — bora pro play!",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "EB Ranking" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Ranking Elite Beach" },
   icons: { icon: "/logo.svg", apple: "/logo.svg" },
 };
 

@@ -59,6 +59,10 @@ export const authConfig = {
 
       if (!isLoggedIn) return false;
 
+      // rotas de API (ex.: upload de imagem) não entram no gating por papel —
+      // os próprios handlers validam a sessão.
+      if (pathname.startsWith("/api/")) return true;
+
       const onPlayerRoute = isPlayerRoute(pathname);
       // atleta só acessa a área do atleta; admin não acessa a área do atleta.
       if (isPlayer && !onPlayerRoute) return Response.redirect(new URL("/inicio", nextUrl));

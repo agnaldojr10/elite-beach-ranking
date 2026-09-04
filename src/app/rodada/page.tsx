@@ -10,9 +10,14 @@ export const dynamic = "force-dynamic";
 const brData = (iso: string) =>
   new Date(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "UTC" });
 
-export default async function RodadaPage() {
+export default async function RodadaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ r?: string }>;
+}) {
   const { playerId } = await requirePlayer();
-  const r = await getPlayerRound(playerId);
+  const { r: roundId } = await searchParams;
+  const r = await getPlayerRound(playerId, roundId);
 
   if (!r.round) {
     return (

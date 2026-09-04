@@ -276,20 +276,27 @@ export async function getPlayerRound(playerId: string, roundId?: string): Promis
   const empty: PlayerRound = { round: null, myTeam: null, jogos: [], group: null, mataMata: [] };
   if (!champ) return empty;
 
-  // rodadas em que o atleta tem dupla (mais recente primeiro); prioriza a SORTEADA.
-  const rounds = await prisma.round.findMany({
-    where: {
-      championshipId: champ.id,
-      isFinals: false,
-      teams: { some: { OR: [{ player1Id: playerId }, { player2Id: playerId }] } },
-    },
-    orderBy: { numero: "desc" },
-    select: { id: true, numero: true, data: true, status: true },
-  });
-  if (rounds.length === 0) return empty;
-  const round = roundId
-    ? rounds.find((r) => r.id === roundId) ?? rounds[0]
-    : rounds.find((r) => r.status === "SORTEADA") ?? rounds[0];
+  // Rodada específica (clique) ou a mais relevante do atleta (SORTEADA > última).
+  let round;
+  if (roundId) {
+    round = await prisma.round.findFirst({
+      where: { id: roundId, championshipId: champ.id, isFinals: false },
+      select: { id: true, numero: true, data: true, status: true },
+    });
+    if (!round) return empty;
+  } else {
+    const rounds = await prisma.round.findMany({
+      where: {
+        championshipId: champ.id,
+        isFinals: false,
+        teams: { some: { OR: [{ player1Id: playerId }, { player2Id: playerId }] } },
+      },
+      orderBy: { numero: "desc" },
+      select: { id: true, numero: true, data: true, status: true },
+    });
+    if (rounds.length === 0) return empty;
+    round = rounds.find((r) => r.status === "SORTEADA") ?? rounds[0];
+  }
 
   const [teams, matches] = await Promise.all([
     prisma.team.findMany({
@@ -441,7 +448,7 @@ export type PlayerDesempenho = {
   saldo: number;
   gamesPro: number;
   etapas: { numero: number; pts: number }[];
-  historico: { numero: number; tierLabel: string; pts: number }[];
+  historico: { roundId: string; numero: number; tierLabel: string; pts: number }[];
   parceiros: { nome: string; vezes: number }[];
   trofeus: { titulos: number; podios: number; pneu: number };
   pneuDetalhe: string | null;
@@ -460,7 +467,7 @@ export async function getPlayerDesempenho(playerId: string): Promise<PlayerDesem
   const [results, stats, pneu] = await Promise.all([
     prisma.roundResult.findMany({
       where: { playerId, round: { championshipId: champ.id, isFinals: false } },
-      select: { tier: true, pointsAwarded: true, round: { select: { numero: true } } },
+      select: { tier: true, pointsAwarded: true, round: { select: { id: true, numero: true } } },
       orderBy: { round: { numero: "asc" } },
     }),
     matchStats(playerId, champ.id),
@@ -471,6 +478,7 @@ export async function getPlayerDesempenho(playerId: string): Promise<PlayerDesem
   const deltaUltima = results.length > 0 ? results[results.length - 1].pointsAwarded : null;
   const etapas = results.map((r) => ({ numero: r.round.numero ?? 0, pts: r.pointsAwarded }));
   const historico = results.map((r) => ({
+    roundId: r.round.id,
     numero: r.round.numero ?? 0,
     tierLabel: TIER_LABEL[r.tier] ?? r.tier,
     pts: r.pointsAwarded,

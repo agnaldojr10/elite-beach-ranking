@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { requirePlayer } from "@/lib/auth-guard";
 import { getPlayerDesempenho } from "@/server/player.service";
-import { PlayerShell } from "@/components/player/PlayerShell";
+import { PlayerShell, PlayerIcon } from "@/components/player/PlayerShell";
 import { Avatar } from "@/components/player/ui";
 
 export const dynamic = "force-dynamic";
@@ -79,11 +80,18 @@ export default async function DesempenhoPage() {
           <p className="mb-2 text-[9.5px] tracking-[.1em] text-muted">HISTÓRICO POR RODADA</p>
           <div className="flex flex-col gap-2">
             {d.historico.map((h, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-[18px] border border-line bg-card px-3.5 py-3">
+              <Link
+                key={i}
+                href={`/rodada?r=${h.roundId}`}
+                className="flex items-center gap-3 rounded-[18px] border border-line bg-card px-3.5 py-3"
+              >
                 <span className="w-[62px] text-[12.5px] font-extrabold text-ink">Rodada {h.numero}</span>
                 <span className="flex-1 truncate text-[11.5px] text-muted">{h.tierLabel}</span>
                 <span className={`text-[13px] font-extrabold ${h.pts > 10 ? "text-success" : "text-ink"}`}>+{h.pts}</span>
-              </div>
+                <span className="text-muted">
+                  <PlayerIcon size={16}><path d="M9 5l7 7-7 7" /></PlayerIcon>
+                </span>
+              </Link>
             ))}
           </div>
         </div>

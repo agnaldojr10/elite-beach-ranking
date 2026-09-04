@@ -16,7 +16,7 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="Elite Beach Ranking" className="mb-3 h-20 w-20" />
           <h1 className="text-2xl font-bold">Elite Beach Ranking</h1>
-          <p className="mt-1 text-sm text-[#8FA9AE]">Painel administrativo</p>
+          <p className="mt-1 text-sm font-semibold text-[#FF7A1A]">Bora pro Play!</p>
         </div>
 
         <form action={formAction} className="flex flex-col gap-4">
@@ -59,14 +59,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-[#5f7d82]">
-          Acesso restrito a administradores
-        </p>
-        <p className="mt-2 text-center text-xs">
-          <a href="/entrar" className="font-semibold text-[#FF7A1A]">
-            Sou jogador — entrar na minha área
-          </a>
-        </p>
       </div>
     </main>
   );

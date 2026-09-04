@@ -14,6 +14,7 @@ export type CardData = {
   pontos: number;
   titulos: number;
   podios: number;
+  photoUrl?: string | null;
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -32,7 +33,7 @@ const initials = (nome: string) => {
   return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase();
 };
 
-function draw(canvas: HTMLCanvasElement, d: CardData) {
+function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | null) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const W = 1080;
@@ -81,10 +82,18 @@ function draw(canvas: HTMLCanvasElement, d: CardData) {
   ctx.save();
   roundRect(ctx, fx, fy, fw, fh, 28);
   ctx.clip();
-  ctx.fillStyle = "#1a4048";
-  ctx.font = `900 200px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.fillText(initials(d.nome), W / 2, fy + fh / 2 + 70);
+  if (img && img.complete && img.naturalWidth > 0) {
+    // cobre a área mantendo proporção (object-cover)
+    const scale = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+    const dw = img.naturalWidth * scale;
+    const dh = img.naturalHeight * scale;
+    ctx.drawImage(img, fx + (fw - dw) / 2, fy + (fh - dh) / 2, dw, dh);
+  } else {
+    ctx.fillStyle = "#1a4048";
+    ctx.font = `900 200px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.fillText(initials(d.nome), W / 2, fy + fh / 2 + 70);
+  }
   ctx.restore();
 
   // nome
@@ -144,7 +153,16 @@ export function PlayerCardCanvas({ data }: { data: CardData }) {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (canvasRef.current) draw(canvasRef.current, data);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    draw(canvas, data);
+    if (data.photoUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => draw(canvas, data, img);
+      img.onerror = () => {};
+      img.src = data.photoUrl;
+    }
   }, [data]);
 
   function compartilhar() {

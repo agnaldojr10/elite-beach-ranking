@@ -31,6 +31,7 @@ export default async function CardPage() {
             pontos: d.pontos,
             titulos: d.trofeus.titulos,
             podios: d.trofeus.podios,
+            photoUrl: home.player.photoUrl,
           }}
         />
       </div>

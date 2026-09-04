@@ -27,6 +27,7 @@
     "next-auth": "^5.0.0-beta.32",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-easy-crop": "^6.2.3",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },

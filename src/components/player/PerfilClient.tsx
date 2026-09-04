@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImageUpload } from "@/components/ImageUpload";
+import { PhotoEditor } from "@/components/player/PhotoEditor";
 import { atualizarFotoAtleta, alterarSenhaAtleta } from "@/app/perfil/actions";
 
 const input = "w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-accent";
@@ -23,10 +23,9 @@ export function PerfilClient({ nome, clube, foto }: { nome: string; clube: strin
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col items-center rounded-[26px] border border-line bg-card p-6 text-center">
-        <div className="w-24">
-          <ImageUpload value={foto} onChange={onFoto} aspect="square" />
-        </div>
+      <div className="flex flex-col items-center rounded-[26px] border border-line bg-card p-4 text-center">
+        <p className="mb-2 self-start text-[9.5px] font-bold tracking-[.1em] text-muted">FOTO DO CARD</p>
+        <PhotoEditor value={foto} onChange={onFoto} />
         <p className="mt-3 text-[18px] font-extrabold text-ink">{nome}</p>
         {clube && <p className="text-[12px] text-muted">{clube}</p>}
         <span className="mt-2 rounded-full bg-accent/15 px-2.5 py-1 text-[10.5px] font-extrabold text-accent">ATLETA</span>

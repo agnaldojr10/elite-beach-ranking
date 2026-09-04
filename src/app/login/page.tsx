@@ -59,6 +59,9 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <p className="mt-8 text-center text-xs text-[#5f7d82]">
+          powered by <span className="font-semibold text-[#8FA9AE]">BoraBeach!</span> @ 2026
+        </p>
       </div>
     </main>
   );

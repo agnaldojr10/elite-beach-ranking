@@ -38,9 +38,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     return NextResponse.json({ url: blob.url });
   } catch (e) {
-    return NextResponse.json(
-      { error: "Falha ao enviar a imagem.", detail: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    const msg = e instanceof Error ? e.message : String(e);
+    const friendly = /private/i.test(msg)
+      ? "O armazenamento de imagens está PRIVADO. Configure o Blob para acesso público na Vercel."
+      : "Falha ao enviar a imagem.";
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }

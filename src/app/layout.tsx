@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Elite Beach Ranking",
-  description: "Painel administrativo do ranking de Beach Tennis da Elite Beach",
+  description: "Ranking de Beach Tennis da Elite Beach — bora pro play!",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "EB Ranking" },
   icons: { icon: "/logo.svg", apple: "/logo.svg" },

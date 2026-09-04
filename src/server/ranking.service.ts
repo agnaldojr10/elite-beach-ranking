@@ -18,39 +18,58 @@ export type PneuInfo = {
 
 export type RankingGeral = { rows: RankingRow[]; pneu: PneuInfo };
 
-function rankPositions(totals: Map<string, number>): Map<string, number> {
-  const ordered = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+type Agg = { pontos: number; wins: number; saldo: number; gp: number };
+
+/** Ordena por Pontos → Vitórias → Saldo de games → Games a favor → nome. */
+function rankByCriteria(aggs: Map<string, Agg>, nome: (id: string) => string): Map<string, number> {
+  const ordered = [...aggs.entries()].sort((a, b) => {
+    const A = a[1];
+    const B = b[1];
+    return (
+      B.pontos - A.pontos ||
+      B.wins - A.wins ||
+      B.saldo - A.saldo ||
+      B.gp - A.gp ||
+      nome(a[0]).localeCompare(nome(b[0]))
+    );
+  });
   const pos = new Map<string, number>();
   ordered.forEach(([playerId], i) => pos.set(playerId, i + 1));
   return pos;
 }
 
 /**
- * Ranking geral do campeonato: soma dos RoundResult por jogador (só REGULAR),
- * com variação ↑/↓ em relação à posição antes da última rodada encerrada, e o
- * troféu pneu (jogador com mais 6x0 sofridos no campeonato).
+ * Ranking geral do campeonato: soma dos RoundResult por jogador (só REGULAR).
+ * Empate em pontos é desempatado por Vitórias → Saldo de games → Games a favor.
+ * Traz variação ↑/↓ (posição antes da última rodada) e o troféu pneu.
  */
 export async function getRankingGeral(championshipId: string): Promise<RankingGeral> {
-  const results = await prisma.roundResult.findMany({
-    where: { round: { championshipId, isFinals: false } },
-    select: {
-      playerId: true,
-      pointsAwarded: true,
-      round: { select: { numero: true } },
-      player: { select: { nome: true, type: true, active: true } },
-    },
-  });
+  const [results, teams, matches] = await Promise.all([
+    prisma.roundResult.findMany({
+      where: { round: { championshipId, isFinals: false } },
+      select: {
+        playerId: true,
+        pointsAwarded: true,
+        round: { select: { numero: true } },
+        player: { select: { nome: true, type: true, active: true } },
+      },
+    }),
+    prisma.team.findMany({
+      where: { round: { championshipId, isFinals: false } },
+      select: { id: true, player1Id: true, player2Id: true, round: { select: { numero: true } } },
+    }),
+    prisma.match.findMany({
+      where: { round: { championshipId, isFinals: false }, scoreA: { not: null }, scoreB: { not: null } },
+      select: { teamAId: true, teamBId: true, scoreA: true, scoreB: true, round: { select: { numero: true } } },
+    }),
+  ]);
 
   const regulars = results.filter((r) => r.player.type === "REGULAR" && r.player.active);
   const nomeById = new Map(regulars.map((r) => [r.playerId, r.player.nome]));
 
-  // Total atual por jogador.
   const totals = new Map<string, number>();
-  for (const r of regulars) {
-    totals.set(r.playerId, (totals.get(r.playerId) ?? 0) + r.pointsAwarded);
-  }
+  for (const r of regulars) totals.set(r.playerId, (totals.get(r.playerId) ?? 0) + r.pointsAwarded);
 
-  // Última rodada com resultado (por número) → base para a variação.
   const lastNumero = regulars.reduce<number | null>((max, r) => {
     const n = r.round.numero ?? null;
     return n != null && (max == null || n > max) ? n : max;
@@ -62,8 +81,39 @@ export async function getRankingGeral(championshipId: string): Promise<RankingGe
     prevTotals.set(r.playerId, (prevTotals.get(r.playerId) ?? 0) + r.pointsAwarded);
   }
 
-  const currPos = rankPositions(totals);
-  const prevPos = rankPositions(prevTotals);
+  // V / SG / GP por jogador (temporada e "antes da última rodada").
+  const teamMap = new Map(teams.map((t) => [t.id, { players: [t.player1Id, t.player2Id], numero: t.round.numero }]));
+  const statsAll = new Map<string, { wins: number; saldo: number; gp: number }>();
+  const statsPrev = new Map<string, { wins: number; saldo: number; gp: number }>();
+  const bump = (map: typeof statsAll, id: string, w: number, s: number, g: number) => {
+    const cur = map.get(id) ?? { wins: 0, saldo: 0, gp: 0 };
+    cur.wins += w; cur.saldo += s; cur.gp += g;
+    map.set(id, cur);
+  };
+  for (const m of matches) {
+    const numero = m.round.numero;
+    const isPrev = lastNumero == null || numero !== lastNumero;
+    const a = m.scoreA as number;
+    const b = m.scoreB as number;
+    const ta = teamMap.get(m.teamAId);
+    const tb = teamMap.get(m.teamBId);
+    if (ta) for (const p of ta.players) { bump(statsAll, p, a > b ? 1 : 0, a - b, a); if (isPrev) bump(statsPrev, p, a > b ? 1 : 0, a - b, a); }
+    if (tb) for (const p of tb.players) { bump(statsAll, p, b > a ? 1 : 0, b - a, b); if (isPrev) bump(statsPrev, p, b > a ? 1 : 0, b - a, b); }
+  }
+
+  const aggAll = new Map<string, Agg>();
+  for (const [id, pontos] of totals) {
+    const s = statsAll.get(id) ?? { wins: 0, saldo: 0, gp: 0 };
+    aggAll.set(id, { pontos, wins: s.wins, saldo: s.saldo, gp: s.gp });
+  }
+  const aggPrev = new Map<string, Agg>();
+  for (const [id, pontos] of prevTotals) {
+    const s = statsPrev.get(id) ?? { wins: 0, saldo: 0, gp: 0 };
+    aggPrev.set(id, { pontos, wins: s.wins, saldo: s.saldo, gp: s.gp });
+  }
+
+  const currPos = rankByCriteria(aggAll, (id) => nomeById.get(id) ?? "");
+  const prevPos = rankByCriteria(aggPrev, (id) => nomeById.get(id) ?? "");
 
   const rows: RankingRow[] = [...totals.entries()]
     .map(([playerId, pontos]) => {

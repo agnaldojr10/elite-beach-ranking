@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Avatar, initials } from "@/components/player/ui";
 
@@ -110,28 +111,30 @@ export function PlayerRankingView({
               {rows.map((r) => {
                 const isMe = r.playerId === meId;
                 return (
-                  <li
-                    key={r.playerId}
-                    className={`flex items-center gap-3 rounded-[20px] px-3.5 py-3 ${
-                      isMe ? "border-[1.5px] border-accent bg-accent/10" : "border border-line bg-card"
-                    }`}
-                  >
-                    <span className={`w-5 text-center text-[13px] font-extrabold ${isMe ? "text-accent" : "text-muted"}`}>
-                      {r.posicao}
-                    </span>
-                    <Avatar nome={r.nome} foto={r.photoUrl} size={36} />
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-ink">
-                      {r.nome}
-                      {isMe && (
-                        <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 align-middle text-[9px] font-extrabold tracking-[.06em] text-accent-ink">
-                          VOCÊ
-                        </span>
-                      )}
-                    </span>
-                    <span className={`text-[11px] font-extrabold ${VAR[r.variacao][1]}`}>{VAR[r.variacao][0]}</span>
-                    <span className="w-12 text-right text-[14px] font-extrabold text-ink">
-                      {r.pontos.toLocaleString("pt-BR")}
-                    </span>
+                  <li key={r.playerId}>
+                    <Link
+                      href={`/atleta/${r.playerId}`}
+                      className={`flex items-center gap-3 rounded-[20px] px-3.5 py-3 ${
+                        isMe ? "border-[1.5px] border-accent bg-accent/10" : "border border-line bg-card"
+                      }`}
+                    >
+                      <span className={`w-5 text-center text-[13px] font-extrabold ${isMe ? "text-accent" : "text-muted"}`}>
+                        {r.posicao}
+                      </span>
+                      <Avatar nome={r.nome} foto={r.photoUrl} size={36} />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-ink">
+                        {r.nome}
+                        {isMe && (
+                          <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 align-middle text-[9px] font-extrabold tracking-[.06em] text-accent-ink">
+                            VOCÊ
+                          </span>
+                        )}
+                      </span>
+                      <span className={`text-[11px] font-extrabold ${VAR[r.variacao][1]}`}>{VAR[r.variacao][0]}</span>
+                      <span className="w-12 text-right text-[14px] font-extrabold text-ink">
+                        {r.pontos.toLocaleString("pt-BR")}
+                      </span>
+                    </Link>
                   </li>
                 );
               })}

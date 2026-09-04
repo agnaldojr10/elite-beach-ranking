@@ -9,6 +9,7 @@ const PLAYER_PREFIXES = [
   "/card",
   "/perfil",
   "/jogo-agora",
+  "/atleta",
 ];
 
 const isPlayerRoute = (pathname: string) =>

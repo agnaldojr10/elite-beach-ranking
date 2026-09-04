@@ -147,7 +147,7 @@ function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | n
   ctx.fillText("RANKING ELITE BEACH", W / 2, 1250);
 }
 
-export function PlayerCardCanvas({ data }: { data: CardData }) {
+export function PlayerCardCanvas({ data, onPhotoClick }: { data: CardData; onPhotoClick?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -195,7 +195,13 @@ export function PlayerCardCanvas({ data }: { data: CardData }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <canvas ref={canvasRef} width={1080} height={1350} className="w-full rounded-[24px] border border-line" />
+      <canvas
+        ref={canvasRef}
+        width={1080}
+        height={1350}
+        onClick={onPhotoClick}
+        className={`w-full rounded-[24px] border border-line ${onPhotoClick ? "cursor-zoom-in" : ""}`}
+      />
       <button
         onClick={compartilhar}
         disabled={busy}

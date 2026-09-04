@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { RegisterSW } from "@/components/RegisterSW";
+import { VersionWatcher } from "@/components/VersionWatcher";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
         <RegisterSW />
+        <VersionWatcher />
         {children}
       </body>
     </html>

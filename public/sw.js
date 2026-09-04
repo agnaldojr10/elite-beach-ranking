@@ -1,7 +1,7 @@
 // Service worker do Elite Beach Ranking.
 // Network-first com cache para estáticos; navegações seguem redirecionamentos
 // (evita o erro "opaqueredirect") e têm fallback offline. Push da área do atleta.
-const CACHE = "ebr-v3";
+const CACHE = "ebr-v4";
 
 self.addEventListener("install", () => self.skipWaiting());
 

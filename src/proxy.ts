@@ -11,5 +11,5 @@ export default auth;
 export const config = {
   // Protege as páginas, mas libera a API de auth/health e QUALQUER arquivo
   // estático (com extensão): logo.svg, sw.js, manifest.webmanifest, ícones…
-  matcher: ["/((?!api/auth|api/health|_next/static|_next/image|.*\\..*).*)"],
+  matcher: ["/((?!api/auth|api/health|api/version|_next/static|_next/image|.*\\..*).*)"],
 };

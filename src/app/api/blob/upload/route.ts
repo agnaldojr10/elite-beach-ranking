@@ -29,14 +29,18 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const safe = (file.name || "imagem").replace(/[^\w.\-]+/g, "_");
-    const blob = await put(`uploads/${safe}`, file, {
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const blob = await put(`uploads/${safe}`, bytes, {
       access: "public",
       addRandomSuffix: true,
       contentType: file.type,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
     return NextResponse.json({ url: blob.url });
-  } catch {
-    return NextResponse.json({ error: "Falha ao enviar a imagem." }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Falha ao enviar a imagem.", detail: e instanceof Error ? e.message : String(e) },
+      { status: 500 },
+    );
   }
 }

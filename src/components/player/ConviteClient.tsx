@@ -99,17 +99,17 @@ export function ConviteClient({ token, player }: { token: string; player: Player
       <form action={formAction} className="mt-6 flex flex-col gap-4">
         <input type="hidden" name="token" value={token} />
         <label>
+          <span className={labelCls}>E-mail ou telefone (para entrar depois)</span>
+          <input name="contato" type="text" required autoComplete="username" className={input} placeholder="seu@email.com ou (17) 99999-9999" />
+          <span className="mt-1 block text-[11px] text-muted">Usamos só para login e recuperação de acesso.</span>
+        </label>
+        <label>
           <span className={labelCls}>Nova senha</span>
           <input name="senha" type="password" required minLength={8} autoComplete="new-password" className={input} placeholder="Mínimo de 8 caracteres" />
         </label>
         <label>
           <span className={labelCls}>Confirmar senha</span>
           <input name="confirmar" type="password" required minLength={8} autoComplete="new-password" className={input} />
-        </label>
-        <label>
-          <span className={labelCls}>E-mail ou telefone (para entrar depois)</span>
-          <input name="contato" type="text" required className={input} placeholder="seu@email.com ou (17) 99999-9999" />
-          <span className="mt-1 block text-[11px] text-muted">Usamos só para login e recuperação de acesso.</span>
         </label>
 
         {error && (

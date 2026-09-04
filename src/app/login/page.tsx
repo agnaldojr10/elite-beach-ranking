@@ -21,13 +21,13 @@ export default function LoginPage() {
 
         <form action={formAction} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-[#8FA9AE]">E-mail</span>
+            <span className="text-xs font-semibold text-[#8FA9AE]">E-mail ou telefone</span>
             <input
               name="email"
-              type="email"
+              type="text"
               required
-              autoComplete="email"
-              placeholder="seu@email.com"
+              autoComplete="username"
+              placeholder="seu@email.com ou (17) 99999-9999"
               className="rounded-xl border border-white/10 bg-[#0F2A30] px-3.5 py-3 text-sm outline-none focus:border-[#FF7A1A]"
             />
           </label>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { InstallPrompt } from "./InstallPrompt";
 
 const NAV = [
   { href: "/inicio", label: "Início", icon: <path d="M3 10.5 12 4l9 6.5M5 9.5V20h5v-6h4v6h5V9.5" /> },
@@ -33,6 +34,7 @@ export function PlayerShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-base">
+      <InstallPrompt />
       <main className="flex-1 px-5 pb-28 pt-2">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] pt-3">

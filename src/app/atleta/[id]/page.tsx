@@ -45,6 +45,9 @@ export default async function AtletaPage({ params }: { params: Promise<{ id: str
             titulos: d.trofeus.titulos,
             podios: d.trofeus.podios,
             photoUrl: home.player.photoUrl,
+            nivel: stats?.nivel ?? null,
+            rating: stats?.rating ?? null,
+            conquistas: stats?.conquistas.map((c) => c.icon) ?? [],
           }}
         />
 

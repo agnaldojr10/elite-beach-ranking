@@ -7,7 +7,54 @@ import { generateDraw } from "@/server/draw.service";
 import { syncKnockout } from "@/server/knockout.service";
 import { buildRoundExport, encerrarRodada } from "@/server/round-close.service";
 import { isValidBeachScore } from "@/lib/score";
-import { notifyPlayers, playersDaRodada } from "@/server/push.service";
+import { notifyPlayers, notifyPlayersEach, playersDaRodada } from "@/server/push.service";
+
+const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0];
+
+/** Monta uma notificação personalizada por atleta ao sortear (dupla, grupo, 1º adversário). */
+async function mensagensDuplasSorteadas(roundId: string): Promise<{ playerId: string; payload: { title: string; body: string; url: string } }[]> {
+  const [teams, matches] = await Promise.all([
+    prisma.team.findMany({
+      where: { roundId },
+      select: {
+        id: true,
+        grupo: true,
+        player1: { select: { id: true, nome: true } },
+        player2: { select: { id: true, nome: true } },
+      },
+    }),
+    prisma.match.findMany({
+      where: { roundId, phase: "GRUPOS" },
+      orderBy: { slot: "asc" },
+      select: { teamAId: true, teamBId: true, slot: true },
+    }),
+  ]);
+
+  const label = new Map(teams.map((t) => [t.id, `${primeiroNome(t.player1.nome)} & ${primeiroNome(t.player2.nome)}`]));
+  const primeiroAdversario = new Map<string, string>();
+  for (const m of matches) {
+    if (!primeiroAdversario.has(m.teamAId)) primeiroAdversario.set(m.teamAId, label.get(m.teamBId) ?? "a definir");
+    if (!primeiroAdversario.has(m.teamBId)) primeiroAdversario.set(m.teamBId, label.get(m.teamAId) ?? "a definir");
+  }
+
+  const url = `/rodada?r=${roundId}`;
+  const out: { playerId: string; payload: { title: string; body: string; url: string } }[] = [];
+  for (const t of teams) {
+    const grupo = t.grupo ?? "A";
+    const adv = primeiroAdversario.get(t.id);
+    const membros = [
+      { me: t.player1, parceiro: t.player2 },
+      { me: t.player2, parceiro: t.player1 },
+    ];
+    for (const { me, parceiro } of membros) {
+      const body = adv
+        ? `Dupla com ${primeiroNome(parceiro.nome)} · Grupo ${grupo}. 1º jogo vs ${adv}.`
+        : `Dupla com ${primeiroNome(parceiro.nome)} · Grupo ${grupo}. Veja seus jogos.`;
+      out.push({ playerId: me.id, payload: { title: "Duplas sorteadas! 🎾", body, url } });
+    }
+  }
+  return out;
+}
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ExportResult = { ok: true; text: string } | { ok: false; error: string };
@@ -143,12 +190,8 @@ export async function confirmarDuplas(roundId: string): Promise<ActionResult> {
   await prisma.round.update({ where: { id: roundId }, data: { duplasConfirmed: true } });
   revalidatePath(`/sorteio/${roundId}`);
   try {
-    const ids = await playersDaRodada(roundId);
-    await notifyPlayers(ids, {
-      title: "Duplas sorteadas! 🎾",
-      body: "Veja sua dupla, grupo e seus jogos da rodada.",
-      url: "/inicio",
-    });
+    const msgs = await mensagensDuplasSorteadas(roundId);
+    await notifyPlayersEach(msgs);
   } catch {
     /* push é best-effort */
   }

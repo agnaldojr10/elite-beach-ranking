@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   archivePlayer,
   createPlayer,
+  enviarPushTeste,
   gerarLinkConvite,
   updatePlayer,
 } from "@/app/cadastros/jogadores/actions";
@@ -41,8 +42,21 @@ export function PlayersManager({ players }: { players: Player[] }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [pushMsg, setPushMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function enviarTeste(playerId: string) {
+    setPushMsg(null);
+    startTransition(async () => {
+      const res = await enviarPushTeste(playerId);
+      if (res.ok) {
+        setPushMsg({ ok: true, text: `Enviado para ${res.sent} de ${res.total} dispositivo(s).` });
+      } else {
+        setPushMsg({ ok: false, text: res.error });
+      }
+    });
+  }
 
   function gerarLink(playerId: string) {
     setError(null);
@@ -312,6 +326,25 @@ export function PlayersManager({ players }: { players: Player[] }) {
                     >
                       Enviar no WhatsApp
                     </a>
+                  </div>
+                )}
+                {draft.vinculado && (
+                  <div className="mt-2 border-t border-line pt-2">
+                    <button
+                      onClick={() => enviarTeste(draft.id!)}
+                      disabled={pending}
+                      className="w-full rounded-xl border border-line py-2.5 text-sm font-semibold text-ink disabled:opacity-70"
+                    >
+                      {pending ? "Enviando…" : "Enviar notificação de teste"}
+                    </button>
+                    {pushMsg && (
+                      <p className={`mt-1.5 text-[11px] font-semibold ${pushMsg.ok ? "text-success" : "text-danger"}`}>
+                        {pushMsg.text}
+                      </p>
+                    )}
+                    <p className="mt-1 text-[10.5px] text-muted">
+                      Só chega se o atleta tiver ativado as notificações no Perfil, no aparelho dele.
+                    </p>
                   </div>
                 )}
               </div>

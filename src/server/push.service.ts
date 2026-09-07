@@ -53,6 +53,41 @@ export async function notifyPlayers(playerIds: string[], payload: PushPayload): 
   );
 }
 
+export type TestPushResult = { ok: boolean; sent: number; total: number; reason?: string };
+
+/** Dispara um push de teste para um atleta (admin). Retorna quantos dispositivos receberam. */
+export async function sendTestPush(playerId: string): Promise<TestPushResult> {
+  if (!ensureConfig()) return { ok: false, sent: 0, total: 0, reason: "VAPID não configurado no servidor." };
+  const subs = await prisma.pushSubscription.findMany({ where: { playerId } });
+  if (subs.length === 0) return { ok: false, sent: 0, total: 0, reason: "Nenhum dispositivo inscrito para este atleta." };
+
+  const data = JSON.stringify({
+    title: "Elite Beach 🎾",
+    body: "Notificação de teste — está funcionando!",
+    url: "/inicio",
+  });
+  let sent = 0;
+  await Promise.allSettled(
+    subs.map(async (s) => {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, data);
+        sent++;
+      } catch (e) {
+        const status = (e as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) {
+          await prisma.pushSubscription.deleteMany({ where: { endpoint: s.endpoint } });
+        }
+      }
+    }),
+  );
+  return {
+    ok: sent > 0,
+    sent,
+    total: subs.length,
+    reason: sent === 0 ? "As inscrições podem ter expirado — reative no Perfil." : undefined,
+  };
+}
+
 /** Atletas (com acesso e push) inscritos numa rodada — para avisar do sorteio/resultado. */
 export async function playersDaRodada(roundId: string): Promise<string[]> {
   const teams = await prisma.team.findMany({

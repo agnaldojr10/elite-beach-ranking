@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guard";
 import { PlayerInputSchema, type PlayerInput } from "@/lib/schemas/player";
 import { gerarConvite } from "@/server/player-access.service";
+import { sendTestPush } from "@/server/push.service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type LinkResult = { ok: true; token: string } | { ok: false; error: string };
+export type TestPushActionResult = { ok: true; sent: number; total: number } | { ok: false; error: string };
 
 const PATH = "/cadastros/jogadores";
 
@@ -52,4 +54,12 @@ export async function gerarLinkConvite(playerId: string): Promise<LinkResult> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao gerar o link." };
   }
+}
+
+/** Dispara um push de teste para o atleta (admin) — valida a entrega sob demanda. */
+export async function enviarPushTeste(playerId: string): Promise<TestPushActionResult> {
+  await requireAdmin();
+  const r = await sendTestPush(playerId);
+  if (!r.ok) return { ok: false, error: r.reason ?? "Não foi possível enviar." };
+  return { ok: true, sent: r.sent, total: r.total };
 }

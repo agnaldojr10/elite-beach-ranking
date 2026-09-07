@@ -81,6 +81,37 @@ function computeElo(events: MatchEvent[]): Map<string, number> {
   return out;
 }
 
+type Agg = { jogos: number; vitorias: number; gp: number; gc: number; maxStreak: number };
+
+/** Agregados por jogador a partir dos eventos (ordem cronológica). */
+function computeAggregates(events: MatchEvent[]): Map<string, Agg> {
+  const m = new Map<string, Agg & { cur: number }>();
+  const get = (id: string) => {
+    let a = m.get(id);
+    if (!a) { a = { jogos: 0, vitorias: 0, gp: 0, gc: 0, maxStreak: 0, cur: 0 }; m.set(id, a); }
+    return a;
+  };
+  for (const e of events) {
+    for (const side of ["a", "b"] as const) {
+      const players = side === "a" ? e.a : e.b;
+      const my = side === "a" ? e.sa : e.sb;
+      const opp = side === "a" ? e.sb : e.sa;
+      const won = my > opp;
+      for (const p of players) {
+        const a = get(p);
+        a.jogos++;
+        a.gp += my;
+        a.gc += opp;
+        if (won) { a.vitorias++; a.cur++; a.maxStreak = Math.max(a.maxStreak, a.cur); }
+        else a.cur = 0;
+      }
+    }
+  }
+  const out = new Map<string, Agg>();
+  for (const [id, a] of m) out.set(id, { jogos: a.jogos, vitorias: a.vitorias, gp: a.gp, gc: a.gc, maxStreak: a.maxStreak });
+  return out;
+}
+
 function nivelLabel(rating: number): string {
   if (rating >= 1150) return "Elite";
   if (rating >= 1060) return "Avançado";
@@ -217,4 +248,199 @@ export async function getAthleteStats(viewerId: string, athleteId: string): Prom
     h2h,
     conquistas,
   };
+}
+
+/* ---------------- Recordes do campeonato ---------------- */
+
+export type Recorde = { icon: string; label: string; nome: string; valor: string };
+
+export async function getChampionshipRecords(): Promise<{ championship: string | null; recordes: Recorde[] }> {
+  const champ = await getActiveChampionship();
+  if (!champ) return { championship: null, recordes: [] };
+  const { events, nome } = await loadEvents(champ.id);
+  if (events.length === 0) return { championship: champ.nome, recordes: [] };
+
+  const agg = computeAggregates(events);
+  const nm = (id: string) => primeiro(nome.get(id) ?? "?");
+  const arr = [...agg.entries()].filter(([, a]) => a.jogos > 0);
+
+  const best = <T,>(items: [string, Agg][], score: (a: Agg) => number, min = 1) => {
+    const elig = items.filter(([, a]) => a.jogos >= min);
+    if (elig.length === 0) return null;
+    return elig.reduce((b, x) => (score(x[1]) > score(b[1]) ? x : b));
+  };
+
+  const recordes: Recorde[] = [];
+  const artilheiro = best(arr, (a) => a.gp);
+  if (artilheiro) recordes.push({ icon: "🎯", label: "Artilheiro", nome: nm(artilheiro[0]), valor: `${artilheiro[1].gp} games` });
+
+  const muralha = best(arr, (a) => a.gp - a.gc);
+  if (muralha) {
+    const s = muralha[1].gp - muralha[1].gc;
+    recordes.push({ icon: "🧱", label: "Muralha (saldo)", nome: nm(muralha[0]), valor: `${s >= 0 ? "+" : ""}${s}` });
+  }
+
+  const seq = best(arr, (a) => a.maxStreak);
+  if (seq && seq[1].maxStreak >= 2) recordes.push({ icon: "🔥", label: "Maior sequência", nome: nm(seq[0]), valor: `${seq[1].maxStreak} vitórias` });
+
+  // regularidade: melhor aproveitamento com mínimo de jogos (cai o mínimo se ninguém elegível)
+  const minJogos = Math.max(...arr.map(([, a]) => a.jogos));
+  const cut = Math.min(6, Math.max(3, Math.floor(minJogos / 2)));
+  const reg = best(arr, (a) => a.vitorias / a.jogos, cut);
+  if (reg) recordes.push({ icon: "📈", label: "Mais regular", nome: nm(reg[0]), valor: `${Math.round((reg[1].vitorias / reg[1].jogos) * 100)}%` });
+
+  // colecionador de títulos (RoundResult)
+  const titles = await prisma.roundResult.groupBy({
+    by: ["playerId"],
+    where: { tier: "CAMPEAO", round: { championshipId: champ.id, isFinals: false } },
+    _count: { playerId: true },
+  });
+  const topTitle = titles.sort((a, b) => b._count.playerId - a._count.playerId)[0];
+  if (topTitle && topTitle._count.playerId > 0) {
+    recordes.push({ icon: "🏆", label: "Colecionador", nome: nm(topTitle.playerId), valor: `${topTitle._count.playerId} título(s)` });
+  }
+
+  return { championship: champ.nome, recordes };
+}
+
+/* ---------------- Comparar dois atletas ---------------- */
+
+export type CompareSide = {
+  id: string;
+  nome: string;
+  photoUrl: string | null;
+  rating: number;
+  nivel: string;
+  jogos: number;
+  vitorias: number;
+  winPct: number;
+  saldo: number;
+  gamesPro: number;
+  maxStreak: number;
+  titulos: number;
+};
+
+export type Comparacao = {
+  a: CompareSide;
+  b: CompareSide;
+  h2h: { winsA: number; winsB: number; gamesA: number; gamesB: number; jogos: number } | null;
+};
+
+export async function getPlayerOptions(): Promise<{ id: string; nome: string }[]> {
+  const champ = await getActiveChampionship();
+  if (!champ) return [];
+  const players = await prisma.player.findMany({
+    where: { active: true, type: "REGULAR", teamsAsP1: { some: { round: { championshipId: champ.id } } } },
+    select: { id: true, nome: true },
+  });
+  const p2 = await prisma.player.findMany({
+    where: { active: true, type: "REGULAR", teamsAsP2: { some: { round: { championshipId: champ.id } } } },
+    select: { id: true, nome: true },
+  });
+  const map = new Map<string, string>();
+  for (const p of [...players, ...p2]) map.set(p.id, p.nome);
+  return [...map.entries()].map(([id, n]) => ({ id, nome: n })).sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+export async function compareAthletes(aId: string, bId: string): Promise<Comparacao | null> {
+  const champ = await getActiveChampionship();
+  if (!champ || aId === bId) return null;
+  const { events } = await loadEvents(champ.id);
+  const agg = computeAggregates(events);
+  const elo = computeElo(events);
+
+  const players = await prisma.player.findMany({
+    where: { id: { in: [aId, bId] } },
+    select: { id: true, nome: true, photoUrl: true },
+  });
+  const pmap = new Map(players.map((p) => [p.id, p]));
+  if (!pmap.has(aId) || !pmap.has(bId)) return null;
+
+  const titles = await prisma.roundResult.groupBy({
+    by: ["playerId"],
+    where: { tier: "CAMPEAO", playerId: { in: [aId, bId] }, round: { championshipId: champ.id, isFinals: false } },
+    _count: { playerId: true },
+  });
+  const titleMap = new Map(titles.map((t) => [t.playerId, t._count.playerId]));
+
+  const side = (id: string): CompareSide => {
+    const a = agg.get(id) ?? { jogos: 0, vitorias: 0, gp: 0, gc: 0, maxStreak: 0 };
+    const r = elo.get(id) ?? 1000;
+    const p = pmap.get(id)!;
+    return {
+      id,
+      nome: p.nome,
+      photoUrl: p.photoUrl,
+      rating: r,
+      nivel: nivelLabel(r),
+      jogos: a.jogos,
+      vitorias: a.vitorias,
+      winPct: a.jogos > 0 ? Math.round((a.vitorias / a.jogos) * 100) : 0,
+      saldo: a.gp - a.gc,
+      gamesPro: a.gp,
+      maxStreak: a.maxStreak,
+      titulos: titleMap.get(id) ?? 0,
+    };
+  };
+
+  // h2h entre os dois
+  let winsA = 0, winsB = 0, gamesA = 0, gamesB = 0, jogos = 0;
+  for (const e of events) {
+    const aTeam = e.a.includes(aId) ? "a" : e.b.includes(aId) ? "b" : null;
+    const bTeam = e.a.includes(bId) ? "a" : e.b.includes(bId) ? "b" : null;
+    if (aTeam && bTeam && aTeam !== bTeam) {
+      const sA = aTeam === "a" ? e.sa : e.sb;
+      const sB = aTeam === "a" ? e.sb : e.sa;
+      gamesA += sA; gamesB += sB;
+      if (sA > sB) winsA++; else winsB++;
+      jogos++;
+    }
+  }
+
+  return {
+    a: side(aId),
+    b: side(bId),
+    h2h: jogos > 0 ? { winsA, winsB, gamesA, gamesB, jogos } : null,
+  };
+}
+
+/* ---------------- Evolução de posição + presença ---------------- */
+
+export type Evolucao = {
+  presenca: { jogadas: number; total: number };
+  pontos: number;
+  serie: { numero: number; pos: number; total: number }[];
+};
+
+export async function getPositionEvolution(playerId: string): Promise<Evolucao> {
+  const champ = await getActiveChampionship();
+  const vazio: Evolucao = { presenca: { jogadas: 0, total: 0 }, pontos: 0, serie: [] };
+  if (!champ) return vazio;
+
+  const [results, totalRodadas] = await Promise.all([
+    prisma.roundResult.findMany({
+      where: { round: { championshipId: champ.id, isFinals: false } },
+      select: { playerId: true, pointsAwarded: true, round: { select: { numero: true } } },
+      orderBy: { round: { numero: "asc" } },
+    }),
+    prisma.round.count({ where: { championshipId: champ.id, isFinals: false } }),
+  ]);
+
+  // rodadas encerradas distintas, em ordem
+  const numeros = [...new Set(results.map((r) => r.round.numero ?? 0))].sort((a, b) => a - b);
+  const acumulado = new Map<string, number>();
+  const serie: { numero: number; pos: number; total: number }[] = [];
+
+  for (const n of numeros) {
+    for (const r of results.filter((x) => (x.round.numero ?? 0) === n)) {
+      acumulado.set(r.playerId, (acumulado.get(r.playerId) ?? 0) + r.pointsAwarded);
+    }
+    const rank = [...acumulado.entries()].sort((a, b) => b[1] - a[1]);
+    const pos = rank.findIndex(([id]) => id === playerId) + 1;
+    if (pos > 0) serie.push({ numero: n, pos, total: rank.length });
+  }
+
+  const jogadas = new Set(results.filter((r) => r.playerId === playerId).map((r) => r.round.numero)).size;
+  const pontos = acumulado.get(playerId) ?? 0;
+  return { presenca: { jogadas, total: totalRodadas }, pontos, serie };
 }

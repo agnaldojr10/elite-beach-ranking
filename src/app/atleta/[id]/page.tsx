@@ -7,6 +7,7 @@ import { getAthleteStats } from "@/server/stats.service";
 import { PlayerShell, PlayerIcon } from "@/components/player/PlayerShell";
 import { AthleteCard } from "@/components/player/AthleteCard";
 import { Avatar } from "@/components/player/ui";
+import { RatingInfo } from "@/components/player/RatingInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,10 @@ export default async function AtletaPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[9.5px] tracking-[.1em] text-muted">RATING</p>
+                <p className="text-[9.5px] tracking-[.1em] text-muted">
+                  RATING
+                  <RatingInfo />
+                </p>
                 <p className="mt-0.5 text-[26px] font-black leading-none text-ink">{stats.rating}</p>
               </div>
             </div>

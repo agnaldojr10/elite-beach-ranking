@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { requirePlayer } from "@/lib/auth-guard";
 import { getPlayerDesempenho } from "@/server/player.service";
+import { getPositionEvolution } from "@/server/stats.service";
 import { PlayerShell, PlayerIcon } from "@/components/player/PlayerShell";
 import { Avatar } from "@/components/player/ui";
+import { PositionChart } from "@/components/player/PositionChart";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ function Stat({ label, value, hint, tone }: { label: string; value: string; hint
 
 export default async function DesempenhoPage() {
   const { playerId } = await requirePlayer();
-  const d = await getPlayerDesempenho(playerId);
+  const [d, evo] = await Promise.all([getPlayerDesempenho(playerId), getPositionEvolution(playerId)]);
 
   if (!d.championship) {
     return (
@@ -52,6 +54,18 @@ export default async function DesempenhoPage() {
           tone={d.saldo >= 0 ? "text-success" : "text-danger"}
         />
       </div>
+
+      {evo.serie.length >= 2 && (
+        <div className="mt-3 rounded-[24px] border border-line bg-card p-4">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[9.5px] tracking-[.1em] text-muted">EVOLUÇÃO NO RANKING</p>
+            <p className="text-[10px] font-semibold text-muted">
+              presença {evo.presenca.jogadas}/{evo.presenca.total}
+            </p>
+          </div>
+          <PositionChart serie={evo.serie} />
+        </div>
+      )}
 
       {d.etapas.length > 0 && (
         <div className="mt-3 rounded-[24px] border border-line bg-card p-4">

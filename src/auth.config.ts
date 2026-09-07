@@ -10,6 +10,7 @@ const PLAYER_PREFIXES = [
   "/perfil",
   "/jogo-agora",
   "/atleta",
+  "/comparar",
 ];
 
 const isPlayerRoute = (pathname: string) =>

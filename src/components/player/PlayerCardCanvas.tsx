@@ -15,6 +15,9 @@ export type CardData = {
   titulos: number;
   podios: number;
   photoUrl?: string | null;
+  nivel?: string | null;
+  rating?: number | null;
+  conquistas?: string[]; // emojis das medalhas
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -137,11 +140,30 @@ function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | n
     ctx.fillText(label, bx + bw / 2, by + 124);
   });
 
-  // troféus + rodapé
+  // nível + rating (opcional)
   ctx.textAlign = "center";
+  let yTrof = 1090;
+  if (d.nivel) {
+    ctx.fillStyle = "#f4c430";
+    ctx.font = `800 30px ${FONT}`;
+    const rt = d.rating ? `   ·   RATING ${d.rating}` : "";
+    ctx.fillText(`NÍVEL ${d.nivel.toUpperCase()}${rt}`, W / 2, 1058);
+    yTrof = 1112;
+  }
+
+  // troféus
   ctx.fillStyle = "#8fa9ae";
   ctx.font = `700 26px ${FONT}`;
-  ctx.fillText(`🏆 ${d.titulos} título(s)   ·   🥇 ${d.podios} pódio(s)`, W / 2, 1120);
+  ctx.fillText(`🏆 ${d.titulos} título(s)   ·   🥇 ${d.podios} pódio(s)`, W / 2, yTrof);
+
+  // faixa de conquistas (emojis) — opcional
+  if (d.conquistas && d.conquistas.length > 0) {
+    ctx.fillStyle = "#f3eee2";
+    ctx.font = `700 42px ${FONT}`;
+    ctx.fillText(d.conquistas.slice(0, 6).join("    "), W / 2, yTrof + 66);
+  }
+
+  // rodapé
   ctx.fillStyle = "#5f7d82";
   ctx.font = `800 22px ${FONT}`;
   ctx.fillText("RANKING ELITE BEACH", W / 2, 1250);

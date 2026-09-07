@@ -53,6 +53,35 @@ export async function notifyPlayers(playerIds: string[], payload: PushPayload): 
   );
 }
 
+/** Envia uma notificação PERSONALIZADA por atleta (payload diferente por playerId). */
+export async function notifyPlayersEach(items: { playerId: string; payload: PushPayload }[]): Promise<void> {
+  if (!ensureConfig() || items.length === 0) return;
+  const ids = items.map((i) => i.playerId);
+  const subs = await prisma.pushSubscription.findMany({ where: { playerId: { in: ids } } });
+  const byPlayer = new Map<string, typeof subs>();
+  for (const s of subs) {
+    const arr = byPlayer.get(s.playerId) ?? [];
+    arr.push(s);
+    byPlayer.set(s.playerId, arr);
+  }
+  await Promise.allSettled(
+    items.flatMap((it) => {
+      const list = byPlayer.get(it.playerId) ?? [];
+      const data = JSON.stringify(it.payload);
+      return list.map(async (s) => {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, data);
+        } catch (e) {
+          const status = (e as { statusCode?: number }).statusCode;
+          if (status === 404 || status === 410) {
+            await prisma.pushSubscription.deleteMany({ where: { endpoint: s.endpoint } });
+          }
+        }
+      });
+    }),
+  );
+}
+
 export type TestPushResult = { ok: boolean; sent: number; total: number; reason?: string };
 
 /** Dispara um push de teste para um atleta (admin). Retorna quantos dispositivos receberam. */

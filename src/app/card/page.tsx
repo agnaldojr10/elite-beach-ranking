@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePlayer } from "@/lib/auth-guard";
 import { getPlayerHome, getPlayerDesempenho } from "@/server/player.service";
+import { getAthleteStats } from "@/server/stats.service";
 import { PlayerShell, PlayerIcon } from "@/components/player/PlayerShell";
 import { PlayerCardCanvas } from "@/components/player/PlayerCardCanvas";
 
@@ -8,7 +9,11 @@ export const dynamic = "force-dynamic";
 
 export default async function CardPage() {
   const { playerId } = await requirePlayer();
-  const [home, d] = await Promise.all([getPlayerHome(playerId), getPlayerDesempenho(playerId)]);
+  const [home, d, stats] = await Promise.all([
+    getPlayerHome(playerId),
+    getPlayerDesempenho(playerId),
+    getAthleteStats(playerId, playerId),
+  ]);
 
   return (
     <PlayerShell>
@@ -32,6 +37,9 @@ export default async function CardPage() {
             titulos: d.trofeus.titulos,
             podios: d.trofeus.podios,
             photoUrl: home.player.photoUrl,
+            nivel: stats?.nivel ?? null,
+            rating: stats?.rating ?? null,
+            conquistas: stats?.conquistas.map((c) => c.icon) ?? [],
           }}
         />
       </div>

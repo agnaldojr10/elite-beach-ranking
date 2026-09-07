@@ -140,15 +140,15 @@ function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | n
     ctx.fillText(label, bx + bw / 2, by + 124);
   });
 
-  // nível + rating (opcional)
+  // nível + rating (opcional) — abaixo das caixas de atributos (que terminam em ~1030)
   ctx.textAlign = "center";
-  let yTrof = 1090;
+  let yTrof = 1098;
   if (d.nivel) {
     ctx.fillStyle = "#f4c430";
-    ctx.font = `800 30px ${FONT}`;
+    ctx.font = `800 28px ${FONT}`;
     const rt = d.rating ? `   ·   RATING ${d.rating}` : "";
-    ctx.fillText(`NÍVEL ${d.nivel.toUpperCase()}${rt}`, W / 2, 1058);
-    yTrof = 1112;
+    ctx.fillText(`NÍVEL ${d.nivel.toUpperCase()}${rt}`, W / 2, 1084);
+    yTrof = 1142;
   }
 
   // troféus
@@ -159,8 +159,8 @@ function draw(canvas: HTMLCanvasElement, d: CardData, img?: HTMLImageElement | n
   // faixa de conquistas (emojis) — opcional
   if (d.conquistas && d.conquistas.length > 0) {
     ctx.fillStyle = "#f3eee2";
-    ctx.font = `700 42px ${FONT}`;
-    ctx.fillText(d.conquistas.slice(0, 6).join("    "), W / 2, yTrof + 66);
+    ctx.font = `700 40px ${FONT}`;
+    ctx.fillText(d.conquistas.slice(0, 6).join("    "), W / 2, yTrof + 60);
   }
 
   // rodapé

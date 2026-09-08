@@ -19,7 +19,14 @@ export const metadata: Metadata = {
   description: "Ranking de Beach Tennis da Elite Beach — bora pro play!",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Ranking Elite Beach" },
-  icons: { icon: "/logo.svg", apple: "/logo.svg" },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/logo.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {

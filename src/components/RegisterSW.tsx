@@ -8,9 +8,15 @@ export function RegisterSW() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      /* ignora falha de registro */
-    });
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        // força checar atualização do SW a cada abertura (pega correções rápido)
+        reg.update().catch(() => {});
+      })
+      .catch(() => {
+        /* ignora falha de registro */
+      });
 
     // Quando um novo service worker assume o controle, recarrega uma vez
     // (garante que o app rode a versão nova sem F5 manual).

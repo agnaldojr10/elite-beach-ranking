@@ -16,6 +16,13 @@ const mk = (id: string, pontos: number): DrawPlayer => ({
   convidado: false,
 });
 
+const mkNovo = (id: string): DrawPlayer => ({ id, nome: id, pontos: 0, convidado: false, novo: true });
+
+const parceiroDe = (id: string, pairs: { player1Id: string; player2Id: string }[]) => {
+  const p = pairs.find((x) => x.player1Id === id || x.player2Id === id);
+  return p ? (p.player1Id === id ? p.player2Id : p.player1Id) : null;
+};
+
 const allIds = (pairs: { player1Id: string; player2Id: string }[]) =>
   pairs.flatMap((p) => [p.player1Id, p.player2Id]).sort();
 
@@ -65,6 +72,42 @@ describe("drawPairs — equilíbrio por ranking", () => {
       );
     expect(has("top", "bottom")).toBe(true);
     expect(has("hi", "lo")).toBe(true);
+  });
+});
+
+describe("drawPairs — jogador novo (sem ranking)", () => {
+  // campo pequeno para o contraste do problema
+  const campoPeq = () => [mk("a", 100), mk("b", 80), mk("c", 60), mk("d", 40), mk("e", 20)];
+  // campo realista (15 pontuados: líder p0 ... lanterna p14) + 1 novato = 16
+  const lider = "p0";
+  const lanterna = "p14";
+  const campoReal = () => Array.from({ length: 15 }, (_, i) => mk(`p${i}`, 150 - i * 10));
+
+  it("SEM a flag novo, o 0 vira 'mais fraco' e gruda no 1º colocado (problema)", () => {
+    const players = [...campoPeq(), mk("x", 0)];
+    const res = drawPairs(players, cfg({ randomness: 0, avoidRepeat: false }), new Map(), "s");
+    expect(parceiroDe("x", res.pairs)).toBe("a"); // exatamente o que NÃO queremos
+  });
+
+  it("COM a flag novo, NUNCA pareia com o líder nem com o lanterna (qualquer seed)", () => {
+    for (let i = 0; i < 200; i++) {
+      const players = [...campoReal(), mkNovo("x")];
+      const res = drawPairs(players, cfg({ randomness: 0, avoidRepeat: false }), new Map(), `n${i}`);
+      const parceiro = parceiroDe("x", res.pairs);
+      expect(parceiro).not.toBe(lider);
+      expect(parceiro).not.toBe(lanterna);
+    }
+  });
+
+  it("o parceiro do novo varia entre vários jogadores (aleatório de verdade)", () => {
+    const parceiros = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const players = [...campoReal(), mkNovo("x")];
+      const res = drawPairs(players, cfg({ randomness: 40, avoidRepeat: false }), new Map(), `s${i}`);
+      const p = parceiroDe("x", res.pairs);
+      if (p) parceiros.add(p);
+    }
+    expect(parceiros.size).toBeGreaterThanOrEqual(3); // sorteio realmente aleatório
   });
 });
 

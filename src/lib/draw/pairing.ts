@@ -23,17 +23,45 @@ function shuffle<T>(arr: readonly T[], rnd: () => number): T[] {
   return a;
 }
 
-/** Ordena por pontos (desc) com um ruído proporcional à aleatoriedade. */
+/**
+ * Força efetiva de cada jogador para o sorteio. Jogadores SEM ranking (novos)
+ * não valem "0" (o que os grudaria no 1º colocado no equilíbrio). Recebem uma
+ * força provisória ALEATÓRIA por sorteio, dentro da FAIXA CENTRAL do ranking
+ * (miolo 50%): o parceiro do novato varia a cada sorteio (aleatório de verdade)
+ * e ele nunca cai preso no extremo — logo, nunca gruda no 1º nem no último.
+ */
+function effectiveStrength(
+  players: readonly DrawPlayer[],
+  rnd: () => number,
+): Map<string, number> {
+  const comRanking = players.filter((p) => !p.novo).map((p) => p.pontos);
+  const map = new Map<string, number>();
+  if (comRanking.length === 0) {
+    // Todos novos (ex.: 1ª rodada): ordem totalmente aleatória.
+    for (const p of players) map.set(p.id, rnd());
+    return map;
+  }
+  const min = Math.min(...comRanking);
+  const spread = Math.max(...comRanking) - min || 1;
+  for (const p of players) {
+    // miolo entre 20% e 80% da faixa de pontos → nunca no topo/fundo
+    map.set(p.id, p.novo ? min + spread * (0.2 + rnd() * 0.6) : p.pontos);
+  }
+  return map;
+}
+
+/** Ordena por força efetiva (desc) com um ruído proporcional à aleatoriedade. */
 function orderByRanking(
   players: readonly DrawPlayer[],
   randomness: number,
   rnd: () => number,
+  strength: Map<string, number>,
 ): DrawPlayer[] {
-  const pontos = players.map((p) => p.pontos);
-  const spread = Math.max(...pontos) - Math.min(...pontos) || 1;
+  const vals = [...strength.values()];
+  const spread = Math.max(...vals) - Math.min(...vals) || 1;
   const amp = (randomness / 100) * spread;
   return [...players]
-    .map((p) => ({ p, key: p.pontos + (rnd() * 2 - 1) * amp }))
+    .map((p) => ({ p, key: (strength.get(p.id) ?? 0) + (rnd() * 2 - 1) * amp }))
     .sort((x, y) => y.key - x.key)
     .map((x) => x.p);
 }
@@ -57,13 +85,13 @@ function pairFromOrder(order: readonly DrawPlayer[], balance: boolean): DrawPair
 function score(
   pairs: readonly DrawPair[],
   history: PairHistory,
-  pontosById: Map<string, number>,
+  strength: Map<string, number>,
 ): { repeatScore: number; imbalance: number } {
   let repeatScore = 0;
   const sums: number[] = [];
   for (const p of pairs) {
     repeatScore += history.get(pairKey(p.player1Id, p.player2Id)) ?? 0;
-    sums.push((pontosById.get(p.player1Id) ?? 0) + (pontosById.get(p.player2Id) ?? 0));
+    sums.push((strength.get(p.player1Id) ?? 0) + (strength.get(p.player2Id) ?? 0));
   }
   const imbalance = sums.length ? Math.max(...sums) - Math.min(...sums) : 0;
   return { repeatScore, imbalance };
@@ -90,7 +118,8 @@ export function drawPairs(
   }
 
   const rnd = mulberry32(seedFromString(seed));
-  const pontosById = new Map(players.map((p) => [p.id, p.pontos]));
+  // Força efetiva: novos entram no miolo aleatório do ranking, não como "0".
+  const strength = effectiveStrength(players, rnd);
 
   // Para não repetir, precisamos explorar alternativas — então garantimos uma
   // aleatoriedade mínima de busca quando avoidRepeat está ligado.
@@ -108,10 +137,10 @@ export function drawPairs(
 
   for (let i = 0; i < attempts; i++) {
     const order = config.balanceByRanking
-      ? orderByRanking(players, searchRandomness, rnd)
+      ? orderByRanking(players, searchRandomness, rnd, strength)
       : shuffle(players, rnd);
     const pairs = pairFromOrder(order, config.balanceByRanking);
-    const { repeatScore, imbalance } = score(pairs, history, pontosById);
+    const { repeatScore, imbalance } = score(pairs, history, strength);
 
     const better =
       !best ||

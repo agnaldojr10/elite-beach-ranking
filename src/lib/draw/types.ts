@@ -7,6 +7,12 @@ export type DrawPlayer = {
   pontos: number;
   /** Convidado joga o sorteio, mas não pontua no ranking. */
   convidado: boolean;
+  /**
+   * Jogador sem ranking ainda (novo no campeonato). Não deve ser tratado como
+   * "0 = mais fraco" — senão o equilíbrio o gruda no 1º colocado. Recebe uma
+   * força provisória = média dos que já pontuaram, entrando no meio da tabela.
+   */
+  novo?: boolean;
 };
 
 export type DrawConfig = {

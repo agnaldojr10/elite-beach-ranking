@@ -53,6 +53,9 @@ async function jogadoresPresentes(
     nome: a.player.nome,
     pontos: pontos.get(a.playerId) ?? 0,
     convidado: a.player.type === "GUEST",
+    // Sem pontuação acumulada = ainda sem ranking (novo). Entra no sorteio com
+    // força média, para não ser grudado no 1º colocado pelo equilíbrio.
+    novo: !pontos.has(a.playerId),
   }));
 }
 

@@ -152,7 +152,7 @@ export function RankingView({
                 >
                   <span className="text-xl">🛞</span>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-ink">Ranking do Pneu</p>
+                    <p className="text-sm font-bold text-ink">Troféu Pneu</p>
                     <p className="text-xs text-muted">
                       {pneuRanking.length} {pneuRanking.length === 1 ? "jogador" : "jogadores"}
                       {pneu ? ` · líder ${pneu.nome} (${pneu.vezes}×)` : ""}

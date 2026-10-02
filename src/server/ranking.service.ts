@@ -10,6 +10,13 @@ export type RankingRow = {
 };
 
 export type PneuDetalhe = { rodada: number | null; adversarios: string; parceiro: string };
+export type PneuRow = {
+  playerId: string;
+  nome: string;
+  photoUrl: string | null;
+  vezes: number;
+  detalhes: PneuDetalhe[];
+};
 export type PneuInfo = {
   playerId: string;
   nome: string;
@@ -17,7 +24,7 @@ export type PneuInfo = {
   detalhes: PneuDetalhe[];
 } | null;
 
-export type RankingGeral = { rows: RankingRow[]; pneu: PneuInfo };
+export type RankingGeral = { rows: RankingRow[]; pneu: PneuInfo; pneuRanking: PneuRow[] };
 
 type Agg = { pontos: number; wins: number; saldo: number; gp: number };
 
@@ -134,12 +141,19 @@ export async function getRankingGeral(championshipId: string): Promise<RankingGe
     })
     .sort((a, b) => a.posicao - b.posicao);
 
-  const pneu = await getPneu(championshipId);
-  return { rows, pneu };
+  const pneuRanking = await getPneuRanking(championshipId);
+  const top = pneuRanking[0];
+  const pneu: PneuInfo = top
+    ? { playerId: top.playerId, nome: top.nome, vezes: top.vezes, detalhes: top.detalhes }
+    : null;
+  return { rows, pneu, pneuRanking };
 }
 
-/** Jogador com mais placares de 6x0 sofridos no campeonato (troféu pneu). */
-export async function getPneu(championshipId: string): Promise<PneuInfo> {
+/**
+ * Ranking do Pneu: TODOS que já levaram 6×0 no campeonato, com a contagem e os
+ * detalhes (rodada, adversários, parceiro). Ordenado por vezes (desc) → nome.
+ */
+export async function getPneuRanking(championshipId: string): Promise<PneuRow[]> {
   const matches = await prisma.match.findMany({
     where: {
       round: { championshipId },
@@ -156,53 +170,52 @@ export async function getPneu(championshipId: string): Promise<PneuInfo> {
       round: { select: { numero: true } },
     },
   });
-  if (matches.length === 0) return null;
+  if (matches.length === 0) return [];
 
   const teamIds = [...new Set(matches.flatMap((m) => [m.teamAId, m.teamBId]))];
   const teams = await prisma.team.findMany({
     where: { id: { in: teamIds } },
     include: {
-      player1: { select: { id: true, nome: true, type: true } },
-      player2: { select: { id: true, nome: true, type: true } },
+      player1: { select: { id: true, nome: true, type: true, photoUrl: true } },
+      player2: { select: { id: true, nome: true, type: true, photoUrl: true } },
     },
   });
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
-  const count = new Map<string, number>();
-  const nome = new Map<string, string>();
-  for (const m of matches) {
-    const loserId = m.scoreA === 6 ? m.teamBId : m.teamAId;
-    const team = teamById.get(loserId);
-    if (!team) continue;
-    for (const pl of [team.player1, team.player2]) {
-      if (pl.type !== "REGULAR") continue;
-      count.set(pl.id, (count.get(pl.id) ?? 0) + 1);
-      nome.set(pl.id, pl.nome);
-    }
-  }
-  if (count.size === 0) return null;
-
-  const [playerId, vezes] = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
-
-  // Detalhes dos 6x0 sofridos pelo jogador do pneu.
-  const detalhes: PneuDetalhe[] = [];
+  const data = new Map<string, { nome: string; photoUrl: string | null; detalhes: PneuDetalhe[] }>();
   for (const m of matches) {
     const loserId = m.scoreA === 6 ? m.teamBId : m.teamAId;
     const winnerId = m.scoreA === 6 ? m.teamAId : m.teamBId;
     const loser = teamById.get(loserId);
     const winner = teamById.get(winnerId);
     if (!loser || !winner) continue;
-    const isPneu = loser.player1.id === playerId || loser.player2.id === playerId;
-    if (!isPneu) continue;
-    const parceiro =
-      loser.player1.id === playerId ? loser.player2.nome : loser.player1.nome;
-    detalhes.push({
-      rodada: m.round?.numero ?? null,
-      adversarios: `${winner.player1.nome} & ${winner.player2.nome}`,
-      parceiro,
-    });
+    for (const pl of [loser.player1, loser.player2]) {
+      if (pl.type !== "REGULAR") continue;
+      const rec = data.get(pl.id) ?? { nome: pl.nome, photoUrl: pl.photoUrl, detalhes: [] };
+      const parceiro = loser.player1.id === pl.id ? loser.player2.nome : loser.player1.nome;
+      rec.detalhes.push({
+        rodada: m.round?.numero ?? null,
+        adversarios: `${winner.player1.nome} & ${winner.player2.nome}`,
+        parceiro,
+      });
+      data.set(pl.id, rec);
+    }
   }
-  detalhes.sort((a, b) => (a.rodada ?? 0) - (b.rodada ?? 0));
 
-  return { playerId, nome: nome.get(playerId) ?? "", vezes, detalhes };
+  const rows: PneuRow[] = [...data.entries()].map(([playerId, r]) => ({
+    playerId,
+    nome: r.nome,
+    photoUrl: r.photoUrl,
+    vezes: r.detalhes.length,
+    detalhes: r.detalhes.sort((a, b) => (a.rodada ?? 0) - (b.rodada ?? 0)),
+  }));
+  rows.sort((a, b) => b.vezes - a.vezes || a.nome.localeCompare(b.nome));
+  return rows;
+}
+
+/** Jogador com mais placares de 6x0 sofridos (topo do ranking do pneu). */
+export async function getPneu(championshipId: string): Promise<PneuInfo> {
+  const [top] = await getPneuRanking(championshipId);
+  if (!top) return null;
+  return { playerId: top.playerId, nome: top.nome, vezes: top.vezes, detalhes: top.detalhes };
 }

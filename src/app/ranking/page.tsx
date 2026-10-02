@@ -35,7 +35,7 @@ export default async function RankingPage() {
     );
   }
 
-  const { rows, pneu } = await getRankingGeral(champ.id);
+  const { rows, pneu, pneuRanking } = await getRankingGeral(champ.id);
 
   const rr = await prisma.roundResult.findMany({
     where: { round: { championshipId: champ.id, isFinals: false } },
@@ -70,7 +70,7 @@ export default async function RankingPage() {
   return (
     <AppShell title="Ranking">
       <p className="mb-3 text-xs text-muted">{champ.nome}</p>
-      <RankingView rows={rows} pneu={pneu} rodadas={rodadas} titulo={champ.nome} />
+      <RankingView rows={rows} pneu={pneu} pneuRanking={pneuRanking} rodadas={rodadas} titulo={champ.nome} />
     </AppShell>
   );
 }

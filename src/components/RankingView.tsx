@@ -15,6 +15,7 @@ type Row = {
 };
 type PneuDetalhe = { rodada: number | null; adversarios: string; parceiro: string };
 type Pneu = { playerId: string; nome: string; vezes: number; detalhes: PneuDetalhe[] } | null;
+type PneuRankRow = { playerId: string; nome: string; photoUrl: string | null; vezes: number; detalhes: PneuDetalhe[] };
 type Rodada = {
   id: string;
   numero: number;
@@ -70,17 +71,20 @@ function Podium({ rows }: { rows: Row[] }) {
 export function RankingView({
   rows,
   pneu,
+  pneuRanking,
   rodadas,
   titulo,
 }: {
   rows: Row[];
   pneu: Pneu;
+  pneuRanking: PneuRankRow[];
   rodadas: Rodada[];
   titulo: string;
 }) {
   const [tab, setTab] = useState<"geral" | "rodada">("geral");
   const [rodadaId, setRodadaId] = useState<string>(rodadas.at(-1)?.id ?? "");
   const [pneuOpen, setPneuOpen] = useState(false);
+  const [pneuDet, setPneuDet] = useState<string | null>(null);
   const [poster, setPoster] = useState(false);
 
   const rodada = rodadas.find((r) => r.id === rodadaId) ?? null;
@@ -140,7 +144,7 @@ export function RankingView({
 
             {poster && <RankingPoster titulo={titulo} rows={rows} />}
 
-            {pneu && (
+            {pneuRanking.length > 0 && (
               <div className="overflow-hidden rounded-2xl border border-line bg-warning/10">
                 <button
                   onClick={() => setPneuOpen((v) => !v)}
@@ -148,29 +152,51 @@ export function RankingView({
                 >
                   <span className="text-xl">🛞</span>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-ink">Troféu Pneu</p>
+                    <p className="text-sm font-bold text-ink">Ranking do Pneu</p>
                     <p className="text-xs text-muted">
-                      {pneu.nome} · {pneu.vezes}× com 6×0
+                      {pneuRanking.length} {pneuRanking.length === 1 ? "jogador" : "jogadores"}
+                      {pneu ? ` · líder ${pneu.nome} (${pneu.vezes}×)` : ""}
                     </p>
                   </div>
                   <span className={`text-muted transition-transform ${pneuOpen ? "rotate-90" : ""}`}>›</span>
                 </button>
                 {pneuOpen && (
-                  <ul className="flex flex-col gap-1 border-t border-line/60 px-4 py-3">
-                    {pneu.detalhes.length === 0 ? (
-                      <li className="text-xs text-muted">Sem detalhes disponíveis.</li>
-                    ) : (
-                      pneu.detalhes.map((d, i) => (
-                        <li key={i} className="text-xs text-ink">
-                          <span className="font-semibold">
-                            {d.rodada != null ? `Rodada ${d.rodada}` : "Rodada especial"}
-                          </span>{" "}
-                          <span className="text-muted">
-                            — 6×0 para {d.adversarios} (dupla com {d.parceiro})
+                  <ul className="flex flex-col gap-0.5 border-t border-line/60 p-2">
+                    {pneuRanking.map((p, i) => (
+                      <li key={p.playerId}>
+                        <button
+                          onClick={() => setPneuDet((d) => (d === p.playerId ? null : p.playerId))}
+                          className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left"
+                        >
+                          <span className="w-5 text-center text-sm font-bold text-muted">{i + 1}</span>
+                          {p.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.photoUrl} alt={p.nome} className="h-8 w-8 rounded-full object-cover" />
+                          ) : (
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ocean/15 text-[11px] font-bold text-ocean">
+                              {initials(p.nome)}
+                            </span>
+                          )}
+                          <span className="flex-1 truncate text-sm font-semibold text-ink">{p.nome}</span>
+                          <span className="rounded-full bg-warning/25 px-2 py-0.5 text-xs font-bold text-ink">
+                            {p.vezes}× 🛞
                           </span>
-                        </li>
-                      ))
-                    )}
+                          <span className={`text-muted transition-transform ${pneuDet === p.playerId ? "rotate-90" : ""}`}>›</span>
+                        </button>
+                        {pneuDet === p.playerId && (
+                          <ul className="flex flex-col gap-1 px-10 pb-2 pt-0.5">
+                            {p.detalhes.map((d, j) => (
+                              <li key={j} className="text-xs text-muted">
+                                <span className="font-semibold text-ink">
+                                  {d.rodada != null ? `Rodada ${d.rodada}` : "Rodada especial"}
+                                </span>{" "}
+                                — 6×0 para {d.adversarios} (dupla com {d.parceiro})
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 )}
               </div>

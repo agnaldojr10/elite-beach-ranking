@@ -4,6 +4,7 @@ import { getPlayerRankingData } from "@/server/player.service";
 import { getChampionshipRecords } from "@/server/stats.service";
 import { PlayerShell } from "@/components/player/PlayerShell";
 import { PlayerRankingView } from "@/components/player/PlayerRankingView";
+import { PneuRanking } from "@/components/player/PneuRanking";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export default async function ClassificacaoPage() {
           <span className="text-[12.5px] font-extrabold text-ink">⚔️ Comparar atletas</span>
           <span className="text-[11px] font-semibold text-accent">abrir →</span>
         </Link>
+
+        <PneuRanking rows={data.pneuRanking} meId={playerId} />
 
         {records.recordes.length > 0 && (
           <div className="mt-4">

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getRankingGeral, getPneu, type PneuInfo, type RankingRow } from "@/server/ranking.service";
+import { getRankingGeral, getPneu, type PneuInfo, type PneuRow, type RankingRow } from "@/server/ranking.service";
 import { buildGroupStandings } from "@/server/knockout.service";
 
 const KO_ORDER: Record<string, number> = { QUARTAS: 0, SEMIFINAL: 1, FINAL: 2, TERCEIRO: 3 };
@@ -196,16 +196,17 @@ export type PlayerRankingData = {
   rodadasEncerradas: number;
   rows: RankingRow[];
   pneu: PneuInfo;
+  pneuRanking: PneuRow[];
   rodadas: { id: string; numero: number; results: { pos: number; nome: string; tierLabel: string; pts: number; isMe: boolean }[] }[];
 };
 
 export async function getPlayerRankingData(playerId: string): Promise<PlayerRankingData> {
   const champ = await getActiveChampionship();
   if (!champ) {
-    return { championship: null, totalRodadas: 0, rodadasEncerradas: 0, rows: [], pneu: null, rodadas: [] };
+    return { championship: null, totalRodadas: 0, rodadasEncerradas: 0, rows: [], pneu: null, pneuRanking: [], rodadas: [] };
   }
 
-  const [{ rows, pneu }, totalRodadas, rodadasEncerradas, rr] = await Promise.all([
+  const [{ rows, pneu, pneuRanking }, totalRodadas, rodadasEncerradas, rr] = await Promise.all([
     getRankingGeral(champ.id),
     prisma.round.count({ where: { championshipId: champ.id, isFinals: false } }),
     prisma.round.count({ where: { championshipId: champ.id, isFinals: false, status: "ENCERRADA" } }),
@@ -243,6 +244,7 @@ export async function getPlayerRankingData(playerId: string): Promise<PlayerRank
     rodadasEncerradas,
     rows,
     pneu,
+    pneuRanking,
     rodadas,
   };
 }

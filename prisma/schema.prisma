@@ -267,6 +267,25 @@ model SuperMatch {
   @@index([tournamentId])
 }
 
+// ---------- auditoria: registro de ações sensíveis do admin ----------
+// Trilha de auditoria para sorteio/placar/estado. Responde "quem fez, quando,
+// o quê" — ex.: detectar re-sorteio ou troca manual de dupla.
+model ActivityLog {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  actorId        String? // Admin.id (null para sessões legadas)
+  actorName      String // nome do admin no momento da ação (denormalizado)
+  actorEmail     String?
+  action         String // SORTEAR, RESORTEAR, TROCAR_PARCEIRO, CONFIRMAR_DUPLAS, SALVAR_PLACAR, ENCERRAR, REABRIR, PESO, MATA_MATA
+  championshipId String?
+  roundId        String?
+  roundNumero    Int?
+  detail         Json? // { seed, duplas, de, para, placarAntigo, placarNovo, ... }
+
+  @@index([roundId])
+  @@index([createdAt])
+}
+
 // ---------- resultado congelado ao encerrar ----------
 model RoundResult {
   id            String     @id @default(cuid())

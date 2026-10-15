@@ -8,6 +8,7 @@ import { syncKnockout } from "@/server/knockout.service";
 import { buildRoundExport, encerrarRodada } from "@/server/round-close.service";
 import { isValidBeachScore } from "@/lib/score";
 import { notifyPlayers, notifyPlayersEach, playersDaRodada } from "@/server/push.service";
+import { logActivity } from "@/server/audit.service";
 
 const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0];
 
@@ -86,10 +87,39 @@ export async function quickAddGuest(roundId: string, nome: string): Promise<Acti
 }
 
 export async function sortear(roundId: string): Promise<SortearResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   try {
+    // re-sorteio? (já existiam duplas antes deste sorteio)
+    const antes = await prisma.team.count({ where: { roundId } });
     const res = await generateDraw(roundId);
     revalidatePath(`/sorteio/${roundId}`);
+
+    // auditoria: quem sorteou, seed, se foi re-sorteio e as duplas resultantes
+    const round = await prisma.round.findUnique({
+      where: { id: roundId },
+      select: {
+        numero: true,
+        championshipId: true,
+        teams: {
+          select: {
+            grupo: true,
+            player1: { select: { nome: true } },
+            player2: { select: { nome: true } },
+          },
+        },
+      },
+    });
+    const duplas = (round?.teams ?? []).map(
+      (t) => `${t.player1.nome} & ${t.player2.nome}${t.grupo ? ` (${t.grupo})` : ""}`,
+    );
+    await logActivity(antes > 0 ? "RESORTEAR" : "SORTEAR", {
+      session,
+      roundId,
+      roundNumero: round?.numero ?? null,
+      championshipId: round?.championshipId ?? null,
+      detail: { seed: res.seed, resorteio: antes > 0, duplas },
+    });
+
     return { ok: true, repeated: res.repeated };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao sortear." };
@@ -102,10 +132,23 @@ export async function saveScore(
   scoreA: number,
   scoreB: number,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   if (!isValidBeachScore(scoreA, scoreB)) {
     return { ok: false, error: "Placar inválido para o beach tennis (ex.: 6×0..6×4, 7×5, 7×6)." };
   }
+  // estado anterior (para registrar edição de placar)
+  const antes = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: {
+      scoreA: true,
+      scoreB: true,
+      grupo: true,
+      phase: true,
+      round: { select: { numero: true, championshipId: true } },
+      teamA: { select: { player1: { select: { nome: true } }, player2: { select: { nome: true } } } },
+      teamB: { select: { player1: { select: { nome: true } }, player2: { select: { nome: true } } } },
+    },
+  });
   const match = await prisma.match.update({
     where: { id: matchId },
     data: { scoreA, scoreB, status: "JOGADO" },
@@ -120,6 +163,23 @@ export async function saveScore(
     }
   }
   revalidatePath(`/sorteio/${roundId}`);
+
+  const dupla = (t?: { player1: { nome: string }; player2: { nome: string } } | null) =>
+    t ? `${t.player1.nome} & ${t.player2.nome}` : "?";
+  const edicao = antes?.scoreA != null; // já tinha placar → é edição
+  await logActivity("SALVAR_PLACAR", {
+    session,
+    roundId,
+    roundNumero: antes?.round.numero ?? null,
+    championshipId: antes?.round.championshipId ?? null,
+    detail: {
+      confronto: `${dupla(antes?.teamA)} x ${dupla(antes?.teamB)}`,
+      fase: antes?.phase === "GRUPOS" ? `Grupo ${antes?.grupo ?? ""}`.trim() : antes?.phase,
+      edicao,
+      placarAntigo: edicao ? `${antes?.scoreA}x${antes?.scoreB}` : null,
+      placarNovo: `${scoreA}x${scoreB}`,
+    },
+  });
   return { ok: true };
 }
 
@@ -162,17 +222,22 @@ export async function trocarParceiro(
   teamAId: string,
   teamBId: string,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   if (teamAId === teamBId) return { ok: false, error: "Selecione duas duplas diferentes." };
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    select: { duplasConfirmed: true },
+    select: { duplasConfirmed: true, numero: true, championshipId: true },
   });
   if (round?.duplasConfirmed) {
     return { ok: false, error: "Duplas já confirmadas — refaça o sorteio para alterar." };
   }
-  const a = await prisma.team.findUnique({ where: { id: teamAId }, select: { player2Id: true } });
-  const b = await prisma.team.findUnique({ where: { id: teamBId }, select: { player2Id: true } });
+  const sel = {
+    player2Id: true,
+    player1: { select: { nome: true } },
+    player2: { select: { nome: true } },
+  };
+  const a = await prisma.team.findUnique({ where: { id: teamAId }, select: sel });
+  const b = await prisma.team.findUnique({ where: { id: teamBId }, select: sel });
   if (!a || !b) return { ok: false, error: "Dupla não encontrada." };
   // troca o 2º integrante entre as duas duplas (mantém grupos e jogos)
   await prisma.$transaction([
@@ -180,15 +245,34 @@ export async function trocarParceiro(
     prisma.team.update({ where: { id: teamBId }, data: { player2Id: a.player2Id } }),
   ]);
   revalidatePath(`/sorteio/${roundId}`);
+
+  await logActivity("TROCAR_PARCEIRO", {
+    session,
+    roundId,
+    roundNumero: round?.numero ?? null,
+    championshipId: round?.championshipId ?? null,
+    detail: {
+      antes: [`${a.player1.nome} & ${a.player2.nome}`, `${b.player1.nome} & ${b.player2.nome}`],
+      depois: [`${a.player1.nome} & ${b.player2.nome}`, `${b.player1.nome} & ${a.player2.nome}`],
+    },
+  });
   return { ok: true };
 }
 
 export async function confirmarDuplas(roundId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   const teams = await prisma.team.count({ where: { roundId } });
   if (teams === 0) return { ok: false, error: "Sorteie as duplas antes de confirmar." };
   await prisma.round.update({ where: { id: roundId }, data: { duplasConfirmed: true } });
   revalidatePath(`/sorteio/${roundId}`);
+  const rInfo = await prisma.round.findUnique({ where: { id: roundId }, select: { numero: true, championshipId: true } });
+  await logActivity("CONFIRMAR_DUPLAS", {
+    session,
+    roundId,
+    roundNumero: rInfo?.numero ?? null,
+    championshipId: rInfo?.championshipId ?? null,
+    detail: { duplas: teams },
+  });
   try {
     const msgs = await mensagensDuplasSorteadas(roundId);
     await notifyPlayersEach(msgs);
@@ -227,11 +311,18 @@ export async function registrarPodioFinals(
 }
 
 export async function encerrar(roundId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   try {
     await encerrarRodada(roundId);
     revalidatePath(`/sorteio/${roundId}`);
     revalidatePath("/ranking");
+    const rInfo = await prisma.round.findUnique({ where: { id: roundId }, select: { numero: true, championshipId: true } });
+    await logActivity("ENCERRAR", {
+      session,
+      roundId,
+      roundNumero: rInfo?.numero ?? null,
+      championshipId: rInfo?.championshipId ?? null,
+    });
     try {
       const ids = await playersDaRodada(roundId);
       await notifyPlayers(ids, {
@@ -249,10 +340,10 @@ export async function encerrar(roundId: string): Promise<ActionResult> {
 }
 
 export async function reabrirRodada(roundId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    select: { status: true, isFinals: true },
+    select: { status: true, isFinals: true, numero: true, championshipId: true },
   });
   if (!round) return { ok: false, error: "Rodada não encontrada." };
   if (round.status !== "ENCERRADA") return { ok: false, error: "A rodada não está encerrada." };
@@ -266,6 +357,12 @@ export async function reabrirRodada(roundId: string): Promise<ActionResult> {
   ]);
   revalidatePath(`/sorteio/${roundId}`);
   revalidatePath("/ranking");
+  await logActivity("REABRIR", {
+    session,
+    roundId,
+    roundNumero: round.numero,
+    championshipId: round.championshipId,
+  });
   return { ok: true };
 }
 
@@ -320,11 +417,11 @@ export async function exportRodada(roundId: string): Promise<ExportResult> {
 }
 
 export async function setPeso(roundId: string, peso: number): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   if (peso !== 1 && peso !== 2) return { ok: false, error: "Peso deve ser 1x ou 2x." };
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    select: { status: true },
+    select: { status: true, numero: true, championshipId: true },
   });
   if (!round) return { ok: false, error: "Rodada não encontrada." };
   if (round.status === "ENCERRADA") {
@@ -332,5 +429,12 @@ export async function setPeso(roundId: string, peso: number): Promise<ActionResu
   }
   await prisma.round.update({ where: { id: roundId }, data: { peso } });
   revalidatePath(`/sorteio/${roundId}`);
+  await logActivity("PESO", {
+    session,
+    roundId,
+    roundNumero: round.numero,
+    championshipId: round.championshipId,
+    detail: { peso: `${peso}x` },
+  });
   return { ok: true };
 }

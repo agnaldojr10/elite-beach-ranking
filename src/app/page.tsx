@@ -37,6 +37,12 @@ const CARDS = [
     desc: "Pontuação, admins e preferências",
     icon: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />,
   },
+  {
+    href: "/auditoria",
+    title: "Auditoria",
+    desc: "Histórico de sorteios, placares e ações",
+    icon: <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4" />,
+  },
 ];
 
 const STATUS_LABEL: Record<string, string> = {

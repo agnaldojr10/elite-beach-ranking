@@ -82,6 +82,25 @@ describe("planKnockout — 18 jogadores (3 grupos de 3)", () => {
   });
 });
 
+describe("planKnockout — regra 2 por grupo (não passa 3 de um grupo)", () => {
+  it("classifica o 2º de um grupo mesmo que o 3º de outro tenha média melhor", () => {
+    const s = (id: string, w: number, bal: number, gf: number) => ({
+      teamId: id, wins: w, gamesBalance: bal, gamesFor: gf, played: 2,
+    });
+    // Cenário real (rodada 10): C3 tem média >= A2 no ranking global, mas só
+    // podem passar 2 de cada grupo → entra A2 (2º do A), sai C3 (3º do C).
+    const gA: GroupStandings = { groupName: "A", standings: [s("A1", 2, 9, 12), s("A2", 1, -1, 7), s("A3", 0, -8, 4)] };
+    const gB: GroupStandings = { groupName: "B", standings: [s("B1", 2, 8, 13), s("B2", 1, 2, 11), s("B3", 0, -10, 2)] };
+    const gC: GroupStandings = { groupName: "C", standings: [s("C1", 1, 1, 10), s("C2", 1, 0, 11), s("C3", 1, -1, 10)] };
+    const plan = planKnockout([gA, gB, gC]);
+    const quals = plan.qualifiers.map((q) => q.teamId);
+    expect(plan.qualifierCount).toBe(6);
+    expect(quals).toContain("A2"); // 2º do A classifica
+    expect(quals).not.toContain("C3"); // 3º do C NÃO classifica (mesmo com média melhor)
+    expect(plan.byes).toEqual(["A1", "B1"]); // 2 melhores por média → bye
+  });
+});
+
 describe("buildSemifinalPairings — anti-revanche", () => {
   it("evita reencontro de grupo ao encaixar byes x vencedores", () => {
     // b0 e w0 são do mesmo grupo → optA seria revanche; deve escolher optB.

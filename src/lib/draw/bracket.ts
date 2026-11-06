@@ -1,9 +1,15 @@
-// Chaveamento do mata-mata — portado fielmente do app anterior (planKnockout).
+// Chaveamento do mata-mata.
 //
-//   2 GRUPOS (ex.: 16 jog. = 2×4): classificam os 2 primeiros de cada grupo →
+//   REGRA DE CLASSIFICAÇÃO: passam os 2 PRIMEIROS de CADA grupo (ordem do grupo:
+//   V → saldo → GP → confronto direto). NUNCA 3 de um grupo e 1 de outro — mesmo
+//   que o 3º de um grupo tenha média melhor que o 2º de outro. Entre os
+//   classificados, a semeadura (byes/quartas) usa as MÉDIAS por jogo — justo
+//   entre grupos de tamanhos diferentes.
+//
+//   2 GRUPOS (ex.: 16 jog. = 2×4): 2+2 classificados →
 //     SEMIFINAL CRUZADA (1ºA×2ºB, 1ºB×2ºA) → Final + 3º.
-//   D ≥ 6 (ex.: 18 = 3×3): 6 classificados; as 2 melhores no ranking geral vão
-//     à semi (bye); a 3ª–6ª fazem as quartas (com anti-revanche); na semi, o
+//   D ≥ 6 (ex.: 18 = 3×3): 6 classificados (2 de cada); os 2 melhores (média)
+//     vão à semi (bye); a 3ª–6ª fazem as quartas (com anti-revanche); na semi, o
 //     vencedor da quarta pega o bye que NÃO enfrentou nos grupos.
 //   D = 4-5: semifinal direta (1×4, 2×3). D = 2-3: final direta.
 
@@ -95,8 +101,15 @@ export function nextStagePairings(winnersInSlotOrder: readonly string[]): Pairin
 
 /** Monta o plano do mata-mata a partir das classificações de grupo. */
 export function planKnockout(groupStandings: readonly GroupStandings[]): KnockoutPlan {
-  const ranked = globalRank(groupStandings);
-  const groupOf = new Map(ranked.map((r) => [r.teamId, r.groupName]));
+  // REGRA: classificam os 2 PRIMEIROS de cada grupo (ordem do grupo). A
+  // semeadura entre os classificados segue as médias por jogo (globalRank).
+  const qualifierIds = new Set(
+    groupStandings.flatMap((grp) => grp.standings.slice(0, 2).map((s) => s.teamId)),
+  );
+  const ranked = globalRank(groupStandings).filter((r) => qualifierIds.has(r.teamId));
+  const groupOf = new Map(
+    groupStandings.flatMap((grp) => grp.standings.map((s) => [s.teamId, grp.groupName] as const)),
+  );
   const met = (a: string, b: string) => !!a && !!b && groupOf.get(a) === groupOf.get(b);
   const mkQual = (ids: string[]): Qualifier[] =>
     ids.map((teamId, i) => ({
